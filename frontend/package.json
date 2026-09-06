@@ -10,6 +10,7 @@
     "build": "next build",
     "start": "next start",
     "seed": "tsx scripts/seed.ts",
+    "registry:read": "tsx scripts/read-registry.ts",
     "supabase:check": "tsx scripts/check-supabase.ts",
     "test:shared": "tsx scripts/test-shared.ts",
     "test:schema": "tsx scripts/test-schema.ts",

@@ -3,6 +3,7 @@ import type { Database } from "@/lib/database.types";
 import { normalizeTagUid, placeholderHash } from "@/lib/crypto/hash";
 import { tapCmacIsValid } from "@/lib/nfc/tap-payload";
 import type { NfcTapPayload, VerificationResult, VerifyProductResponse } from "@/lib/types";
+import { consumeNonceOnChain } from "@verichain/hedera";
 
 /** Team 1 verify (database). Hedera consumeNonce will be called via `@verichain/hedera`. */
 
@@ -115,105 +116,72 @@ export async function verifyTap(
     };
   }
 
+  const tagIdHash = placeholderHash(tagUid);
   const nonceHash = placeholderHash(`${tagUid}:${nonce}`);
-  const { data: existingNonce, error: nonceLookupError } = await supabase
+
+  // [HEDERA] Consume nonce on-chain FIRST — blockchain is the authority for replay prevention.
+  // If this reverts with NonceAlreadyConsumed, the DB is never touched.
+  let chainTxHash: string;
+  try {
+    const res = await consumeNonceOnChain({ tagIdHash, nonceHash });
+    chainTxHash = res.txHash;
+  } catch (err: any) {
+    const reason: string = err?.message ?? String(err);
+    const isDuplicate =
+      reason.toLowerCase().includes("noncealreadyconsumed") ||
+      reason.toLowerCase().includes("nonce already consumed") ||
+      reason.toLowerCase().includes("already consumed");
+
+    if (isDuplicate) {
+      await recordAttempt(supabase, {
+        tagId: tag.id,
+        productId: tag.product_id,
+        payload,
+        result: "DUPLICATE",
+        failureReason: "Nonce already consumed on-chain",
+        scannedBy,
+      });
+      const facts = await loadProductFacts(supabase, tag.product_id);
+      return {
+        result: "DUPLICATE",
+        failure_reason: "Nonce already consumed on-chain",
+        ...publicFacts(facts),
+        httpStatus: 200,
+      };
+    }
+
+    // Any other Hedera error
+    await recordAttempt(supabase, {
+      tagId: tag.id,
+      productId: tag.product_id,
+      payload,
+      result: "ERROR",
+      failureReason: reason,
+      scannedBy,
+    });
+    return { result: "ERROR", failure_reason: reason, httpStatus: 500 };
+  }
+
+  // Hedera confirmed the nonce is fresh — now mirror it in Supabase.
+  const now = new Date().toISOString();
+  const { data: existingNonce } = await supabase
     .from("verification_nonces")
     .select("id, consumed")
     .eq("nonce_hash", nonceHash)
     .maybeSingle();
 
-  if (nonceLookupError) {
-    await recordAttempt(supabase, {
-      tagId: tag.id,
-      productId: tag.product_id,
-      payload,
-      result: "ERROR",
-      failureReason: nonceLookupError.message,
-      scannedBy,
-    });
-    return {
-      result: "ERROR",
-      failure_reason: nonceLookupError.message,
-      httpStatus: 500,
-    };
-  }
-
-  if (existingNonce?.consumed) {
-    await recordAttempt(supabase, {
-      tagId: tag.id,
-      productId: tag.product_id,
-      payload,
-      result: "DUPLICATE",
-      failureReason: "Nonce already used",
-      scannedBy,
-    });
-    const facts = await loadProductFacts(supabase, tag.product_id);
-    return {
-      result: "DUPLICATE",
-      failure_reason: "Nonce already used",
-      ...publicFacts(facts),
-      httpStatus: 200,
-    };
-  }
-
-  const now = new Date().toISOString();
   if (existingNonce) {
-    const { error: consumeError } = await supabase
+    await supabase
       .from("verification_nonces")
       .update({ consumed: true, consumed_at: now })
       .eq("id", existingNonce.id);
-    if (consumeError) {
-      await recordAttempt(supabase, {
-        tagId: tag.id,
-        productId: tag.product_id,
-        payload,
-        result: "ERROR",
-        failureReason: consumeError.message,
-        scannedBy,
-      });
-      return { result: "ERROR", failure_reason: consumeError.message, httpStatus: 500 };
-    }
   } else {
-    const { error: insertNonceError } = await supabase
-      .from("verification_nonces")
-      .insert({
-        tag_id: tag.id,
-        nonce_hash: nonceHash,
-        consumed: true,
-        consumed_at: now,
-      });
-    if (insertNonceError) {
-      if (insertNonceError.code === "23505") {
-        await recordAttempt(supabase, {
-          tagId: tag.id,
-          productId: tag.product_id,
-          payload,
-          result: "DUPLICATE",
-          failureReason: "Nonce already used",
-          scannedBy,
-        });
-        const raced = await loadProductFacts(supabase, tag.product_id);
-        return {
-          result: "DUPLICATE",
-          failure_reason: "Nonce already used",
-          ...publicFacts(raced),
-          httpStatus: 200,
-        };
-      }
-      await recordAttempt(supabase, {
-        tagId: tag.id,
-        productId: tag.product_id,
-        payload,
-        result: "ERROR",
-        failureReason: insertNonceError.message,
-        scannedBy,
-      });
-      return {
-        result: "ERROR",
-        failure_reason: insertNonceError.message,
-        httpStatus: 500,
-      };
-    }
+    await supabase.from("verification_nonces").insert({
+      tag_id: tag.id,
+      nonce_hash: nonceHash,
+      consumed: true,
+      consumed_at: now,
+    });
   }
 
   const facts = await loadProductFacts(supabase, tag.product_id);
@@ -223,7 +191,7 @@ export async function verifyTap(
     product_id: tag.product_id,
     batch_id: facts.batch_id,
     tag_id: tag.id,
-    payload: { tag_uid: tagUid, nonce_hash: nonceHash },
+    payload: { tag_uid: tagUid, nonce_hash: nonceHash, chain_tx_hash: chainTxHash },
   });
 
   await recordAttempt(supabase, {
@@ -238,6 +206,7 @@ export async function verifyTap(
   return {
     result: "AUTHENTIC",
     ...publicFacts(facts),
+    chain_tx_hash: chainTxHash,
     httpStatus: 200,
   };
 }

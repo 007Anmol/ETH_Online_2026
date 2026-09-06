@@ -7,6 +7,7 @@
   --border: #e5e5e5;
   --surface: #ffffff;
   --surface-muted: #eeeeec;
+   --font-primary: "Manrope", sans-serif;
 }
 
 .dark {
@@ -34,6 +35,7 @@ body {
   transition:
     background-color 0.3s ease,
     color 0.3s ease;
+   font-family: var(--font-primary), sans-serif;
 }
 
 button,
@@ -44,4 +46,19 @@ a {
 ::selection {
   background: var(--foreground);
   color: var(--background);
+}
+
+.verifiable-highlight {
+  display: inline-block;
+  background: #000;
+  color: #fff;
+  padding: 0.08em 0.14em 0.12em;
+  transition:
+    background-color 500ms ease,
+    color 500ms ease;
+}
+
+.dark .verifiable-highlight {
+  background: #fff;
+  color: #000;
 }

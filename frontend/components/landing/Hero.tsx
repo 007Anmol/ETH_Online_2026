@@ -33,9 +33,10 @@ export function Hero() {
             >
               Every product.
               <br />
-              <span className="inline-block bg-black px-4 py-2 text-white dark:bg-white dark:text-black">
-  Verifiable.
-</span>
+  <span className="verifiable-highlight">
+    Verifiable.
+  </span>
+
             </motion.h1>
 
             <motion.p

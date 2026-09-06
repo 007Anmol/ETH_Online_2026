@@ -73,7 +73,9 @@ export default function Home() {
             <h2 className="mx-auto mt-6 max-w-3xl text-5xl font-medium leading-[0.95] tracking-[-0.06em] lg:text-7xl">
               Make every product
               <br />
-              <span className="text-[var(--muted)]">verifiable.</span>
+                <span className="verifiable-highlight">
+    Verifiable.
+  </span>
             </h2>
 
             <p className="mx-auto mt-8 max-w-md text-base leading-7 text-[var(--muted)]">

@@ -1,3 +1,5 @@
+// src/components/ThemeProvider.tsx
+
 "use client";
 
 import {
@@ -10,34 +12,44 @@ import {
 
 type Theme = "light" | "dark";
 
-type ThemeContextType = {
+type ThemeContextValue = {
   theme: Theme;
   toggleTheme: () => void;
 };
 
-const ThemeContext = createContext<ThemeContextType | undefined>(
-  undefined
-);
+const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>("light");
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem("verichain-theme") as Theme | null;
+    const savedTheme = localStorage.getItem("verichain-theme");
 
-    if (savedTheme === "dark" || savedTheme === "light") {
-      setTheme(savedTheme);
-      document.documentElement.classList.toggle("dark", savedTheme === "dark");
-    }
+    const initialTheme: Theme =
+      savedTheme === "dark" ? "dark" : "light";
+
+    setTheme(initialTheme);
+
+    document.documentElement.classList.toggle(
+      "dark",
+      initialTheme === "dark"
+    );
   }, []);
 
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", theme === "dark");
-    localStorage.setItem("verichain-theme", theme);
-  }, [theme]);
-
   const toggleTheme = () => {
-    setTheme((current) => (current === "light" ? "dark" : "light"));
+    setTheme((currentTheme) => {
+      const nextTheme: Theme =
+        currentTheme === "light" ? "dark" : "light";
+
+      localStorage.setItem("verichain-theme", nextTheme);
+
+      document.documentElement.classList.toggle(
+        "dark",
+        nextTheme === "dark"
+      );
+
+      return nextTheme;
+    });
   };
 
   return (

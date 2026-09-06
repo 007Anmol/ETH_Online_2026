@@ -1,6 +1,14 @@
 import type { Metadata } from "next";
+
 import { ThemeProvider } from "../components/ThemeProvider";
 import "./globals.css";
+
+import { Manrope } from "next/font/google";
+
+const manrope = Manrope({
+  subsets: ["latin"],
+  variable: "--font-primary",
+});
 
 export const metadata: Metadata = {
   title: "PRAMAAN — Every product. Verifiable.",
@@ -15,7 +23,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body>
+      <body className={manrope.variable}>
         <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>

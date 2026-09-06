@@ -21,17 +21,37 @@ contract MockStatusRegistry {
     }
 }
 
+contract MockEscrow {
+    mapping(uint256 => uint8) public statuses;
+
+    function setEscrowStatus(
+        uint256 escrowId,
+        uint8 status
+    ) external {
+        statuses[escrowId] = status;
+    }
+
+    function getEscrowStatus(
+        uint256 escrowId
+    ) external view returns (uint8) {
+        return statuses[escrowId];
+    }
+}
+
 contract VeriChainHookTest is Test {
     VeriChainHook hook;
     MockStatusRegistry registry;
+    MockEscrow escrow;
 
     uint256 productId = 1;
 
     function setUp() public {
         registry = new MockStatusRegistry();
+        escrow = new MockEscrow();
 
         hook = new VeriChainHook(
-            address(registry)
+            address(registry),
+            address(escrow)
         );
     }
 
@@ -75,8 +95,15 @@ contract VeriChainHookTest is Test {
         );
 
         bool allowed =
-            hook.checkSettlement(productId);
+            hook.checkSettlement(productId, 1);
 
         assertTrue(allowed);
+    }
+
+    function testCannotSettleFrozenEscrow() public {
+        registry.setProductStatus(productId, 0);
+        escrow.setEscrowStatus(1, 1);
+
+        assertFalse(hook.canSettle(productId, 1));
     }
 }

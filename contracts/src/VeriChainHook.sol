@@ -9,8 +9,13 @@ interface IVeriChainStatus {
     ) external view returns (uint8);
 }
 
+interface IVeriChainEscrowStatus {
+    function getEscrowStatus(uint256 escrowId) external view returns (uint8);
+}
+
 contract VeriChainHook is Ownable {
     IVeriChainStatus public immutable registry;
+    IVeriChainEscrowStatus public immutable escrow;
 
     event SettlementChecked(
         uint256 indexed productId,
@@ -18,7 +23,8 @@ contract VeriChainHook is Ownable {
     );
 
     constructor(
-        address registryAddress
+        address registryAddress,
+        address escrowAddress
     ) Ownable(msg.sender) {
         require(
             registryAddress != address(0),
@@ -28,6 +34,9 @@ contract VeriChainHook is Ownable {
         registry = IVeriChainStatus(
             registryAddress
         );
+
+        require(escrowAddress != address(0), "Invalid escrow");
+        escrow = IVeriChainEscrowStatus(escrowAddress);
     }
 
     function canSettle(
@@ -46,10 +55,23 @@ contract VeriChainHook is Ownable {
         return true;
     }
 
+    function canSettle(
+        uint256 productId,
+        uint256 escrowId
+    ) public view returns (bool) {
+        if (!canSettle(productId)) {
+            return false;
+        }
+
+        // ACTIVE = 0. Frozen and released escrow cannot settle again.
+        return escrow.getEscrowStatus(escrowId) == 0;
+    }
+
     function checkSettlement(
-        uint256 productId
+        uint256 productId,
+        uint256 escrowId
     ) external returns (bool allowed) {
-        allowed = canSettle(productId);
+        allowed = canSettle(productId, escrowId);
 
         emit SettlementChecked(
             productId,

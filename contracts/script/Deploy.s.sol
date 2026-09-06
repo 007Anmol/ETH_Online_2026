@@ -17,7 +17,8 @@ contract Deploy is Script {
         );
 
         VeriChainHook hook = new VeriChainHook(
-            address(registry)
+            address(registry),
+            address(escrow)
         );
 
         vm.stopBroadcast();

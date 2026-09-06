@@ -24,6 +24,11 @@ const navigation = [
     icon: Truck,
   },
   {
+    label: "Checkpoints",
+    href: "/checkpoints",
+    icon: Activity,
+  },
+  {
     label: "Verification",
     href: "/verification",
     icon: ScanLine,

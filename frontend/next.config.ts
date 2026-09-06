@@ -10,6 +10,7 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.resolve(frontendDir, ".."),
   },
+  allowedDevOrigins: ["pedigree-landscape-jump.ngrok-free.dev"],
 };
 
 export default nextConfig;

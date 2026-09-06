@@ -14,24 +14,29 @@
     "test:nfc": "tsx scripts/test-bind.ts && tsx scripts/test-verify.ts && tsx scripts/test-simulate.ts && tsx scripts/test-nfc-flow.ts && tsx scripts/test-http.ts && tsx scripts/test-edges.ts"
   },
   "dependencies": {
+    "@react-three/drei": "^10.7.8",
+    "@react-three/fiber": "^9.7.0",
     "@supabase/supabase-js": "^2.78.0",
     "@verichain/shared": "file:../packages/shared",
     "clsx": "^2.1.1",
     "framer-motion": "^13.2.0",
+    "lucide-react": "^1.41.0",
     "next": "16.3.4",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "server-only": "^0.0.1",
     "simplex-noise": "^4.0.3",
-    "tailwind-merge": "^3.6.0"
+    "tailwind-merge": "^3.6.0",
+    "three": "^0.185.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "^0.185.4",
     "babel-plugin-react-compiler": "1.0.0",
-    "tailwindcss": "^4",
+    "tailwindcss": "^4.3.3",
     "tsx": "^4.23.13",
     "typescript": "^5"
   }

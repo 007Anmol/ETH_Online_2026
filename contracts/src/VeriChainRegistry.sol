@@ -2,33 +2,50 @@
 pragma solidity ^0.8.24;
 
 abstract contract Ownable {
-    address public owner;
+    address private _owner;
+
+    error OwnableUnauthorizedAccount(address account);
+    error OwnableInvalidOwner(address owner);
 
     event OwnershipTransferred(
         address indexed previousOwner,
         address indexed newOwner
     );
 
-    modifier onlyOwner() {
-        require(msg.sender == owner, "Ownable: caller is not the owner");
-        _;
-    }
-
     constructor(address initialOwner) {
-        require(initialOwner != address(0), "Ownable: zero owner");
-        owner = initialOwner;
+        if (initialOwner == address(0)) {
+            revert OwnableInvalidOwner(address(0));
+        }
+
+        _owner = initialOwner;
         emit OwnershipTransferred(address(0), initialOwner);
     }
 
+    modifier onlyOwner() {
+        if (msg.sender != _owner) {
+            revert OwnableUnauthorizedAccount(msg.sender);
+        }
+        _;
+    }
+
+    function owner() public view returns (address) {
+        return _owner;
+    }
+
     function transferOwnership(address newOwner) external onlyOwner {
-        require(newOwner != address(0), "Ownable: zero owner");
-        emit OwnershipTransferred(owner, newOwner);
-        owner = newOwner;
+        if (newOwner == address(0)) {
+            revert OwnableInvalidOwner(address(0));
+        }
+
+        address previousOwner = _owner;
+        _owner = newOwner;
+        emit OwnershipTransferred(previousOwner, newOwner);
     }
 
     function renounceOwnership() external onlyOwner {
-        emit OwnershipTransferred(owner, address(0));
-        owner = address(0);
+        address previousOwner = _owner;
+        _owner = address(0);
+        emit OwnershipTransferred(previousOwner, address(0));
     }
 }
 
@@ -82,10 +99,11 @@ contract VeriChainRegistry is Ownable {
         bool resolved;
     }
 
-    uint256 private nextShipmentId = 1;
+    uint256 public nextShipmentId = 1;
 
     mapping(uint256 => Product) public products;
     mapping(uint256 => Shipment) public shipments;
+
     mapping(uint256 => Checkpoint[]) private productCheckpoints;
     mapping(uint256 => Anomaly[]) private productAnomalies;
 
@@ -130,7 +148,9 @@ contract VeriChainRegistry is Ownable {
         bytes32 reasonHash
     );
 
-    event AnomalyResolved(uint256 indexed productId);
+    event AnomalyResolved(
+        uint256 indexed productId
+    );
 
     constructor() Ownable(msg.sender) {}
 
@@ -143,6 +163,7 @@ contract VeriChainRegistry is Ownable {
         address initialCustodian
     ) external onlyOwner {
         require(!products[productId].exists, "Product already exists");
+        require(initialCustodian != address(0), "Invalid custodian");
 
         products[productId] = Product({
             tokenId: tokenId,
@@ -197,7 +218,9 @@ contract VeriChainRegistry is Ownable {
         );
     }
 
-    function acceptShipment(uint256 shipmentId) external {
+    function acceptShipment(
+        uint256 shipmentId
+    ) external {
         Shipment storage shipment = shipments[shipmentId];
 
         require(shipment.exists, "Shipment does not exist");
@@ -205,6 +228,7 @@ contract VeriChainRegistry is Ownable {
             msg.sender == shipment.receiver,
             "Not shipment receiver"
         );
+
         require(
             shipment.status == ShipmentStatus.CREATED ||
             shipment.status == ShipmentStatus.IN_TRANSIT,
@@ -264,7 +288,10 @@ contract VeriChainRegistry is Ownable {
         int256 longitude,
         bytes32 locationHash
     ) external {
-        require(products[productId].exists, "Product does not exist");
+        require(
+            products[productId].exists,
+            "Product does not exist"
+        );
 
         productCheckpoints[productId].push(
             Checkpoint({
@@ -290,7 +317,10 @@ contract VeriChainRegistry is Ownable {
         uint256 riskScore,
         bytes32 reasonHash
     ) external onlyOwner {
-        require(products[productId].exists, "Product does not exist");
+        require(
+            products[productId].exists,
+            "Product does not exist"
+        );
         require(riskScore <= 100, "Invalid risk score");
 
         productAnomalies[productId].push(
@@ -312,20 +342,31 @@ contract VeriChainRegistry is Ownable {
         );
     }
 
-    function resolveAnomaly(uint256 productId) external onlyOwner {
+    function resolveAnomaly(
+        uint256 productId
+    ) external onlyOwner {
         Product storage product = products[productId];
 
-        require(product.exists, "Product does not exist");
+        require(
+            product.exists,
+            "Product does not exist"
+        );
 
         product.status = ProductStatus.RESOLVED;
 
-        Anomaly[] storage anomalies = productAnomalies[productId];
-
-        if (anomalies.length > 0) {
-            anomalies[anomalies.length - 1].resolved = true;
+        if (productAnomalies[productId].length > 0) {
+            productAnomalies[productId][
+                productAnomalies[productId].length - 1
+            ].resolved = true;
         }
 
         emit AnomalyResolved(productId);
+    }
+
+    function getProductStatus(
+        uint256 productId
+    ) external view returns (uint8) {
+        return uint8(products[productId].status);
     }
 
     function getCheckpoints(
@@ -338,11 +379,5 @@ contract VeriChainRegistry is Ownable {
         uint256 productId
     ) external view returns (Anomaly[] memory) {
         return productAnomalies[productId];
-    }
-
-    function getProductStatus(
-        uint256 productId
-    ) external view returns (ProductStatus) {
-        return products[productId].status;
     }
 }

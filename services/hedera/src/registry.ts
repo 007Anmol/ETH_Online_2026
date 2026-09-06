@@ -1,11 +1,16 @@
 /**
  * Team 1 identity writes to VeriChainRegistry.
  * Call these from API routes / lib — never from the browser.
- * Implement after the contract is deployed. Do not duplicate this in frontend/lib.
  */
 
+import registryAbiJson from "@verichain/shared/abi/VeriChainRegistry.json";
+import { getHederaConfig, sendContractCall } from "./client";
+import type { Abi, Address } from "viem";
+
+const registryAbi = registryAbiJson as Abi;
+
 export type RegistryTx = {
-  txHash: string;
+  txHash: `0x${string}`;
 };
 
 export type CreateBatchOnChainInput = {
@@ -15,7 +20,7 @@ export type CreateBatchOnChainInput = {
 
 export type MintBatchOnChainInput = {
   batchIdHash: `0x${string}`;
-  quantity: number;
+  productIdHashes: `0x${string}`[];
 };
 
 export type BindTagOnChainInput = {
@@ -32,38 +37,49 @@ export type ConsumeNonceOnChainInput = {
   nonceHash: `0x${string}`;
 };
 
-function notWired(name: string): never {
-  throw new Error(
-    `${name} is not wired to Hedera yet. Deploy VeriChainRegistry first.`,
-  );
+async function writeRegistry(
+  functionName: string,
+  args: readonly unknown[],
+): Promise<RegistryTx> {
+  const { registryAddress } = getHederaConfig();
+  const result = await sendContractCall({
+    address: registryAddress as Address,
+    abi: registryAbi,
+    functionName,
+    args,
+  });
+  if (!result.ok) {
+    throw new Error(result.revertReason);
+  }
+  return { txHash: result.txHash };
 }
 
 export async function createBatchOnChain(
-  _input: CreateBatchOnChainInput,
+  input: CreateBatchOnChainInput,
 ): Promise<RegistryTx> {
-  return notWired("createBatchOnChain");
+  return writeRegistry("createBatch", [input.batchIdHash, input.quantity]);
 }
 
 export async function mintBatchOnChain(
-  _input: MintBatchOnChainInput,
+  input: MintBatchOnChainInput,
 ): Promise<RegistryTx> {
-  return notWired("mintBatchOnChain");
+  return writeRegistry("mintBatch", [input.batchIdHash, input.productIdHashes]);
 }
 
 export async function bindTagOnChain(
-  _input: BindTagOnChainInput,
+  input: BindTagOnChainInput,
 ): Promise<RegistryTx> {
-  return notWired("bindTagOnChain");
+  return writeRegistry("bindTag", [input.productIdHash, input.tagIdHash]);
 }
 
 export async function revokeTagOnChain(
-  _input: RevokeTagOnChainInput,
+  input: RevokeTagOnChainInput,
 ): Promise<RegistryTx> {
-  return notWired("revokeTagOnChain");
+  return writeRegistry("revokeTag", [input.tagIdHash]);
 }
 
 export async function consumeNonceOnChain(
-  _input: ConsumeNonceOnChainInput,
+  input: ConsumeNonceOnChainInput,
 ): Promise<RegistryTx> {
-  return notWired("consumeNonceOnChain");
+  return writeRegistry("consumeNonce", [input.tagIdHash, input.nonceHash]);
 }

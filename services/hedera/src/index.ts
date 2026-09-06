@@ -1,4 +1,10 @@
-export { getHederaConfig, type HederaOperatorConfig } from "./client";
+export {
+  getHederaConfig,
+  sendContractCall,
+  type ContractCallResult,
+  type HederaOperatorConfig,
+  type SendContractCallInput,
+} from "./client";
 export {
   bindTagOnChain,
   consumeNonceOnChain,

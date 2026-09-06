@@ -41,8 +41,9 @@ insert into role_permissions (role, permission) values
   ('MANUFACTURER', 'VIEW_PROVENANCE')
 on conflict (role, permission) do nothing;
 
--- Prefer `cd frontend && npm run seed` — it also clears leftover tags.
+-- Prefer `cd frontend && npm run seed` — it also clears leftover tags and writes keccak256 hashes.
 -- This SQL only upserts the one batch + one TAG_PENDING product.
+-- Hashes must be keccak256(utf8 bytes), matching Solidity keccak256(bytes(...)).
 
 insert into batches (
   batch_code,
@@ -58,7 +59,7 @@ insert into batches (
 )
 select
   'SAACHI-DEV-001',
-  '0x' || encode(sha256('SAACHI-DEV-001'::bytea), 'hex'),
+  '0x800b7c304c7d5e0941cbd22199381ba84c314d7f29979aea62cb86f1c5a24869',
   organizations.id,
   'Rado HyperChrome',
   'WATCHES',
@@ -87,7 +88,7 @@ insert into products (
 )
 select
   'VC-SAACHI-000001',
-  '0x' || encode(sha256('VC-SAACHI-000001'::bytea), 'hex'),
+  '0xed817a6846fc050e090737335149b55f79d0ba71c58846f45e70b9adece9f194',
   batches.id,
   'SN-SAACHI-000001',
   organizations.id,

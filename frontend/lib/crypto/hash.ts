@@ -1,8 +1,8 @@
-import { createHash } from "node:crypto";
+import { keccak256, stringToBytes } from "viem";
 
-/** Phase 1 stand-in. Replace with keccak256 when talking to Hedera. */
-export function placeholderHash(value: string): string {
-  return `0x${createHash("sha256").update(value).digest("hex")}`;
+/** keccak256 of the UTF-8 bytes. Same preimage as Solidity keccak256(bytes(value)). */
+export function placeholderHash(value: string): `0x${string}` {
+  return keccak256(stringToBytes(value));
 }
 
 export function normalizeTagUid(tagUid: string): string {

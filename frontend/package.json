@@ -11,6 +11,7 @@
     "start": "next start",
     "seed": "tsx scripts/seed.ts",
     "registry:read": "tsx scripts/read-registry.ts",
+    "registry:create-batch": "tsx scripts/create-batch-onchain.ts",
     "supabase:check": "tsx scripts/check-supabase.ts",
     "test:shared": "tsx scripts/test-shared.ts",
     "test:schema": "tsx scripts/test-schema.ts",
@@ -33,7 +34,8 @@
     "server-only": "^0.0.1",
     "simplex-noise": "^4.0.3",
     "tailwind-merge": "^3.6.0",
-    "three": "^0.185.1"
+    "three": "^0.185.1",
+    "viem": "^2.56.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

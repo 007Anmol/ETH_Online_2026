@@ -69,6 +69,54 @@ async function clearBindState(
   );
 }
 
+async function rehashIdentityRows(supabase: SupabaseClient) {
+  const { data: batches, error: batchError } = await supabase
+    .from("batches")
+    .select("id, batch_code, batch_id_hash");
+  await requireOk(batchError, "Could not list batches to rehash");
+  for (const batch of batches ?? []) {
+    const next = placeholderHash(batch.batch_code);
+    if (batch.batch_id_hash === next) continue;
+    await requireOk(
+      (await supabase.from("batches").update({ batch_id_hash: next }).eq("id", batch.id))
+        .error,
+      `Could not rehash batch ${batch.batch_code}`,
+    );
+  }
+
+  const { data: products, error: productError } = await supabase
+    .from("products")
+    .select("id, product_code, product_id_hash");
+  await requireOk(productError, "Could not list products to rehash");
+  for (const product of products ?? []) {
+    const next = placeholderHash(product.product_code);
+    if (product.product_id_hash === next) continue;
+    await requireOk(
+      (
+        await supabase
+          .from("products")
+          .update({ product_id_hash: next })
+          .eq("id", product.id)
+      ).error,
+      `Could not rehash product ${product.product_code}`,
+    );
+  }
+
+  const { data: tags, error: tagError } = await supabase
+    .from("nfc_tags")
+    .select("id, tag_uid, tag_id_hash");
+  await requireOk(tagError, "Could not list tags to rehash");
+  for (const tag of tags ?? []) {
+    const next = placeholderHash(tag.tag_uid);
+    if (tag.tag_id_hash === next) continue;
+    await requireOk(
+      (await supabase.from("nfc_tags").update({ tag_id_hash: next }).eq("id", tag.id))
+        .error,
+      `Could not rehash tag ${tag.tag_uid}`,
+    );
+  }
+}
+
 async function seed() {
   loadEnvFiles();
 
@@ -199,10 +247,13 @@ async function seed() {
     .eq("id", product.id);
   await requireOk(resetError, "Failed to reset product status");
 
+  await rehashIdentityRows(supabase);
+
   console.log("Step 1 seed is clean:");
   console.log(`  batch   ${DEMO_BATCH_CODE}  MINTED`);
   console.log(`  product ${product.product_code}  TAG_PENDING`);
   console.log("  tags    none");
+  console.log(`  hashes  keccak256`);
 }
 
 seed().catch((error: unknown) => {

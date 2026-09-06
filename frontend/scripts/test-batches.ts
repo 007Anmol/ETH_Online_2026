@@ -142,7 +142,7 @@ async function main() {
     "expiry_date is not stored",
     created.batch !== undefined && !("expiry_date" in created.batch),
   );
-  check("hash uses 0x sha256 prefix", /^0x[0-9a-f]{64}$/.test(created.batch?.batch_id_hash ?? ""));
+  check("hash uses 0x keccak256 prefix", /^0x[0-9a-f]{64}$/.test(created.batch?.batch_id_hash ?? ""));
   check("two product twins were minted", created.products?.length === 2);
 
   const expectedSlug = slug("HARNESS-BAGS-01");

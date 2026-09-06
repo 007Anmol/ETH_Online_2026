@@ -5,6 +5,7 @@
     "moduleResolution": "bundler",
     "strict": true,
     "noEmit": true,
+    "resolveJsonModule": true,
     "paths": {
       "@verichain/shared": ["../../packages/shared/index.ts"]
     }

@@ -53,6 +53,12 @@ check(
   "placeholderHash is stable",
   placeholderHash("SAACHI-DEV-001") === hash,
 );
+check(
+  "placeholderHash is keccak256(bytes) matching Foundry",
+  placeholderHash("RADO-2026-001") ===
+    "0xaaf1d3ab1bc79b6e63c36aa15dab306ca0010d1cc0af08ed2768c1a54469161b",
+  placeholderHash("RADO-2026-001"),
+);
 
 check(
   "normalizeTagUid strips 0x, colons, spaces",

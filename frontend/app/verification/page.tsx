@@ -8,11 +8,49 @@ import {
   ScanLine,
   ShieldCheck,
 } from "lucide-react";
+import { useReadContract } from "wagmi";
 
 import Sidebar from "@/components/team2/Sidebar";
 import Topbar from "@/components/team2/Topbar";
+import { CONTRACTS } from "@/lib/contracts";
+import { registryAbi } from "@/lib/registryAbi";
+
+const productStatusLabels = [
+  "CREATED",
+  "IN_TRANSIT",
+  "DELIVERED",
+  "SUSPECT_COUNTERFEIT",
+  "RESOLVED",
+] as const;
 
 export default function VerificationPage() {
+  const { data: registryOwner, isError: registryReadFailed } =
+    useReadContract({
+      address: CONTRACTS.registry,
+      abi: registryAbi,
+      functionName: "owner",
+    });
+
+  const { data: productStatus } = useReadContract({
+    address: CONTRACTS.registry,
+    abi: registryAbi,
+    functionName: "getProductStatus",
+    args: [1n],
+  });
+
+  const statusIndex =
+    typeof productStatus === "bigint"
+      ? Number(productStatus)
+      : productStatus;
+
+  const statusLabel =
+    typeof statusIndex === "number" &&
+    Number.isInteger(statusIndex) &&
+    statusIndex >= 0 &&
+    statusIndex < productStatusLabels.length
+      ? productStatusLabels[statusIndex]
+      : "UNAVAILABLE";
+
   return (
     <div className="min-h-screen bg-white text-black">
       <div className="flex">
@@ -57,6 +95,29 @@ export default function VerificationPage() {
                     <ScanLine size={14} />
                     Scan NFC
                   </button>
+                </div>
+              </section>
+
+              <section className="rounded-xl border border-gray-200 p-5">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-semibold">Registry Connection</h2>
+                  <span className="text-[10px] uppercase tracking-wider text-gray-400">
+                    Anvil · 31337
+                  </span>
+                </div>
+
+                <div className="mt-5 space-y-4 text-xs">
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-gray-500">Registry owner</span>
+                    <span className="max-w-[190px] truncate font-mono text-[10px]">
+                      {registryReadFailed ? "Read failed" : registryOwner ?? "Loading..."}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-gray-500">Product #1 status</span>
+                    <span className="font-medium">{statusLabel}</span>
+                  </div>
                 </div>
               </section>
 

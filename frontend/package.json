@@ -21,6 +21,7 @@
     "@react-three/drei": "^10.7.8",
     "@react-three/fiber": "^9.7.0",
     "@supabase/supabase-js": "^2.78.0",
+    "@verichain/hedera": "file:../services/hedera",
     "@verichain/shared": "file:../packages/shared",
     "clsx": "^2.1.1",
     "framer-motion": "^13.2.0",

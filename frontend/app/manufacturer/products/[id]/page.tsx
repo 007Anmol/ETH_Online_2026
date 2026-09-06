@@ -1,34 +1,12 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { createServiceClient } from "@/lib/supabase";
+import { notFound, redirect } from "next/navigation";
+import { getManufacturerProduct } from "@/lib/manufacturing";
 import { getSession } from "@/lib/session";
-import { redirect } from "next/navigation";
-import { productCategoryLabel, type Product, type Batch } from "@/lib/types";
+import { productCategoryLabel } from "@/lib/types";
 
 export const metadata = { title: "Product detail — VeriChain" };
 
 type Props = { params: Promise<{ id: string }> };
-
-async function getProduct(id: string, orgId: string): Promise<{ product: Product; batch: Batch } | null> {
-  const db = createServiceClient();
-  const { data: product } = await db
-    .from("products")
-    .select("*")
-    .eq("id", id)
-    .eq("manufacturer_org_id", orgId)
-    .maybeSingle();
-
-  if (!product) return null;
-
-  const { data: batch } = await db
-    .from("batches")
-    .select("*")
-    .eq("id", (product as Product).batch_id)
-    .maybeSingle();
-
-  if (!batch) return null;
-  return { product: product as Product, batch: batch as Batch };
-}
 
 export default async function ProductDetailPage({ params }: Props) {
   const session = await getSession();
@@ -36,7 +14,7 @@ export default async function ProductDetailPage({ params }: Props) {
 
   const { id } = await params;
   const result = session.organizationId
-    ? await getProduct(id, session.organizationId)
+    ? await getManufacturerProduct(id, session.organizationId)
     : null;
 
   if (!result) notFound();

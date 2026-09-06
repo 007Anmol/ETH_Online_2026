@@ -4,6 +4,8 @@ import { normalizeTagUid, placeholderHash } from "@/lib/crypto/hash";
 import { tapCmacIsValid } from "@/lib/nfc/tap-payload";
 import type { NfcTapPayload, VerificationResult, VerifyProductResponse } from "@/lib/types";
 
+/** Team 1 verify (database). Hedera consumeNonce will be called via `@verichain/hedera`. */
+
 type VerifyInput = NfcTapPayload & {
   scanned_by?: string | null;
 };

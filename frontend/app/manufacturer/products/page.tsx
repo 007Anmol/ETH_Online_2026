@@ -1,23 +1,22 @@
 import Link from "next/link";
-import { createServiceClient } from "@/lib/supabase";
-import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
+import { manufacturerProductsQuery } from "@/lib/manufacturing";
+import { getSession } from "@/lib/session";
+import { createServiceClient } from "@/lib/supabase";
 import type { Product } from "@/lib/types";
 
 export const metadata = { title: "Products — VeriChain" };
 
-async function getProducts(orgId: string, batchId?: string, status?: string): Promise<Product[]> {
-  const db = createServiceClient();
-  let query = db
-    .from("products")
-    .select("*")
-    .eq("manufacturer_org_id", orgId)
-    .order("created_at", { ascending: false });
-
-  if (batchId) query = query.eq("batch_id", batchId);
-  if (status) query = query.eq("status", status as any);
-
-  const { data } = await query;
+async function getProducts(
+  orgId: string,
+  batchId?: string,
+  status?: string,
+): Promise<Product[]> {
+  const { data } = await manufacturerProductsQuery(
+    createServiceClient(),
+    orgId,
+    { batchId, status },
+  );
   return (data as Product[]) ?? [];
 }
 

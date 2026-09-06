@@ -1,29 +1,21 @@
-import { json } from "@/lib/api/http";
+import { json, readJson } from "@/lib/api/http";
+import { nfcActorId } from "@/lib/nfc/actor";
+import { verifyTap } from "@/lib/nfc/verify-tap";
 import { getSession } from "@/lib/session";
 import { createServiceClient } from "@/lib/supabase";
-import { verifyTap } from "@/lib/nfc/verify-tap";
+import type { NfcTapPayload } from "@/lib/types";
 
 export async function POST(request: Request) {
-  let body: { tag_uid?: string; nonce?: string; cmac?: string };
-  try {
-    body = (await request.json()) as {
-      tag_uid?: string;
-      nonce?: string;
-      cmac?: string;
-    };
-  } catch {
-    return json({ error: "Invalid JSON body" }, 400);
-  }
+  const parsed = await readJson<NfcTapPayload>(request);
+  if (!parsed.ok) return json({ error: "Invalid JSON body" }, 400);
+  const body = parsed.body;
 
   const session = await getSession();
   const result = await verifyTap(createServiceClient(), {
     tag_uid: body.tag_uid ?? "",
     nonce: body.nonce ?? "",
     cmac: body.cmac ?? "",
-    scanned_by:
-      session?.profileId && session.profileId !== "local-demo-profile"
-        ? session.profileId
-        : null,
+    scanned_by: nfcActorId(session),
   });
 
   const { httpStatus, ...response } = result;

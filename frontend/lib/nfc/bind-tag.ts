@@ -8,6 +8,8 @@ import {
 } from "@/lib/crypto/hash";
 import type { ProductStatus, TagStatus } from "@/lib/types";
 
+/** Team 1 NFC bind (database). Hedera bindTag will be called via `@verichain/hedera`. */
+
 type BindInput = {
   product_id: string;
   tag_uid: string;

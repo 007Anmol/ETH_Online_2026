@@ -1,16 +1,14 @@
-import { json } from "@/lib/api/http";
+import { json, readJson } from "@/lib/api/http";
+import { nfcActorId } from "@/lib/nfc/actor";
 import { bindTag } from "@/lib/nfc/bind-tag";
 import { getSession } from "@/lib/session";
 import { createServiceClient } from "@/lib/supabase";
-import { isManufacturerRole } from "@/lib/types";
+import { isManufacturerRole, type BindTagInput } from "@/lib/types";
 
 export async function POST(request: Request) {
-  let body: { product_id?: string; tag_uid?: string };
-  try {
-    body = (await request.json()) as { product_id?: string; tag_uid?: string };
-  } catch {
-    return json({ error: "Invalid JSON body" }, 400);
-  }
+  const parsed = await readJson<BindTagInput>(request);
+  if (!parsed.ok) return json({ error: "Invalid JSON body" }, 400);
+  const body = parsed.body;
 
   const session = await getSession();
   if (!session || !isManufacturerRole(session.role)) {
@@ -20,10 +18,7 @@ export async function POST(request: Request) {
   const result = await bindTag(createServiceClient(), {
     product_id: body.product_id ?? "",
     tag_uid: body.tag_uid ?? "",
-    performed_by:
-      session?.profileId && session.profileId !== "local-demo-profile"
-        ? session.profileId
-        : null,
+    performed_by: nfcActorId(session),
   });
 
   if (!result.ok) {

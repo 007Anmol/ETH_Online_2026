@@ -80,6 +80,72 @@ export async function deleteHarnessBatches(
   const ids = (batches ?? []).map((row) => row.id);
   if (ids.length === 0) return;
 
+  const { data: products, error: listProductError } = await supabase
+    .from("products")
+    .select("id")
+    .in("batch_id", ids);
+  if (listProductError) throw new Error(listProductError.message);
+  const productIds = (products ?? []).map((row) => row.id);
+
+  if (productIds.length > 0) {
+    const { data: tags, error: listTagError } = await supabase
+      .from("nfc_tags")
+      .select("id")
+      .in("product_id", productIds);
+    if (listTagError) throw new Error(listTagError.message);
+    const tagIds = (tags ?? []).map((row) => row.id);
+
+    if (tagIds.length > 0) {
+      const { error: attemptError } = await supabase
+        .from("verification_attempts")
+        .delete()
+        .in("tag_id", tagIds);
+      if (attemptError) throw new Error(attemptError.message);
+      const { error: nonceError } = await supabase
+        .from("verification_nonces")
+        .delete()
+        .in("tag_id", tagIds);
+      if (nonceError) throw new Error(nonceError.message);
+      const { error: eventError } = await supabase
+        .from("product_events")
+        .delete()
+        .in("tag_id", tagIds);
+      if (eventError) throw new Error(eventError.message);
+      const { error: historyError } = await supabase
+        .from("tag_binding_history")
+        .delete()
+        .in("tag_id", tagIds);
+      if (historyError) throw new Error(historyError.message);
+      const { error: tagError } = await supabase
+        .from("nfc_tags")
+        .delete()
+        .in("id", tagIds);
+      if (tagError) throw new Error(tagError.message);
+    }
+
+    const { error: historyProductError } = await supabase
+      .from("tag_binding_history")
+      .delete()
+      .in("product_id", productIds);
+    if (historyProductError) throw new Error(historyProductError.message);
+    const { error: eventProductError } = await supabase
+      .from("product_events")
+      .delete()
+      .in("product_id", productIds);
+    if (eventProductError) throw new Error(eventProductError.message);
+    const { error: opsError } = await supabase
+      .from("manufacturing_operations")
+      .delete()
+      .in("product_id", productIds);
+    if (opsError) throw new Error(opsError.message);
+  }
+
+  const { error: opsBatchError } = await supabase
+    .from("manufacturing_operations")
+    .delete()
+    .in("batch_id", ids);
+  if (opsBatchError) throw new Error(opsBatchError.message);
+
   const { error: productError } = await supabase
     .from("products")
     .delete()

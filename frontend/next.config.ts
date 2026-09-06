@@ -6,7 +6,7 @@ const frontendDir = path.dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
-  transpilePackages: ["@verichain/shared"],
+  transpilePackages: ["@verichain/shared", "@verichain/hedera"],
   turbopack: {
     root: path.resolve(frontendDir, ".."),
   },

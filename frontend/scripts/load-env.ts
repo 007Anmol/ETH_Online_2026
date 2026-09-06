@@ -5,6 +5,7 @@ export function loadEnvFiles() {
   const candidates = [
     path.resolve(process.cwd(), ".env.local"),
     path.resolve(process.cwd(), ".env"),
+    path.resolve(process.cwd(), "../.env.local"),
     path.resolve(process.cwd(), "../.env"),
   ];
 

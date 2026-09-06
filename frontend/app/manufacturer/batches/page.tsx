@@ -1,18 +1,14 @@
 import Link from "next/link";
-import { createServiceClient } from "@/lib/supabase";
-import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
+import { manufacturerBatchesQuery } from "@/lib/manufacturing";
+import { getSession } from "@/lib/session";
+import { createServiceClient } from "@/lib/supabase";
 import { productCategoryLabel, type Batch } from "@/lib/types";
 
 export const metadata = { title: "Batches — VeriChain" };
 
 async function getBatches(orgId: string): Promise<Batch[]> {
-  const db = createServiceClient();
-  const { data } = await db
-    .from("batches")
-    .select("*")
-    .eq("manufacturer_org_id", orgId)
-    .order("created_at", { ascending: false });
+  const { data } = await manufacturerBatchesQuery(createServiceClient(), orgId);
   return (data as Batch[]) ?? [];
 }
 

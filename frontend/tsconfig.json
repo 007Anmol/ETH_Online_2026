@@ -20,7 +20,8 @@
     ],
     "paths": {
       "@/*": ["./*"],
-      "@verichain/shared": ["../packages/shared/index.ts"]
+      "@verichain/shared": ["../packages/shared/index.ts"],
+      "@verichain/hedera": ["../services/hedera/src/index.ts"]
     }
   },
   "include": [
@@ -30,7 +31,8 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts",
-    "../packages/shared/**/*.ts"
+    "../packages/shared/**/*.ts",
+    "../services/hedera/src/**/*.ts"
   ],
   "exclude": ["node_modules"]
 }

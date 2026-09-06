@@ -7,6 +7,7 @@ import {
   placeholderHash,
 } from "@/lib/crypto/hash";
 import type { ProductStatus, TagStatus } from "@/lib/types";
+import { bindTagOnChain } from "@verichain/hedera";
 
 /** Team 1 NFC bind (database). Hedera bindTag will be called via `@verichain/hedera`. */
 
@@ -175,6 +176,28 @@ export async function bindTag(
   if (!tagId) {
     return { ok: false, status: 500, error: "Tag id missing after bind" };
   }
+
+  // [HEDERA] Bind Tag On-Chain
+  const productIdHash = placeholderHash(product.product_code);
+  const tagIdHash = placeholderHash(tagUid);
+  let chainTxHash: string;
+  try {
+    const res = await bindTagOnChain({ productIdHash, tagIdHash });
+    chainTxHash = res.txHash;
+  } catch (err: any) {
+    console.error("[bindTag] Hedera bindTag failed:", err);
+    // Rollback the tag insertion if it was newly created
+    if (inserted) {
+      await supabase.from("nfc_tags").delete().eq("id", tagId);
+    }
+    return { ok: false, status: 500, error: err.message || "Failed to bind tag on-chain" };
+  }
+
+  // Update nfc_tags with chain_tx_hash
+  await supabase
+    .from("nfc_tags")
+    .update({ chain_tx_hash: chainTxHash })
+    .eq("id", tagId);
 
   const previousStatus = product.status;
   const { error: productUpdateError } = await supabase

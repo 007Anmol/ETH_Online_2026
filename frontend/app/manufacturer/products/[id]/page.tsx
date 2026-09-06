@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { getManufacturerProduct } from "@/lib/manufacturing";
 import { getSession } from "@/lib/session";
 import { productCategoryLabel } from "@/lib/types";
+import { RevokeButton } from "./revoke-button";
 
 export const metadata = { title: "Product detail — VeriChain" };
 
@@ -80,13 +81,16 @@ export default async function ProductDetailPage({ params }: Props) {
         {/* NFC section note */}
         <div className="border-t border-zinc-100 bg-zinc-50 px-6 py-4 text-sm text-zinc-500">
           {product.status === "TAG_BOUND" ? (
-            <p>
-              ✅ NFC tag bound. Saachi&apos;s{" "}
-              <Link href="/simulator" className="font-medium text-zinc-700 hover:underline">
-                Simulator →
-              </Link>{" "}
-              to test authenticate &amp; replay.
-            </p>
+            <div className="flex items-center justify-between">
+              <p>
+                ✅ NFC tag bound. Saachi&apos;s{" "}
+                <Link href="/simulator" className="font-medium text-zinc-700 hover:underline">
+                  Simulator →
+                </Link>{" "}
+                to test authenticate &amp; replay.
+              </p>
+              {result.tagId && <RevokeButton tagId={result.tagId} />}
+            </div>
           ) : (
             <p>
               ⏳ Awaiting NFC bind. Saachi binds this product on{" "}

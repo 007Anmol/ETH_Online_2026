@@ -50,6 +50,7 @@ export default async function BatchesPage() {
                 <th className="px-4 py-3">Plant</th>
                 <th className="px-4 py-3">Qty</th>
                 <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Chain TX</th>
                 <th className="px-4 py-3">Created</th>
                 <th className="px-4 py-3"></th>
               </tr>
@@ -68,6 +69,15 @@ export default async function BatchesPage() {
                   <td className="px-4 py-3 text-zinc-700">{b.quantity}</td>
                   <td className="px-4 py-3">
                     <StatusBadge status={b.status} />
+                  </td>
+                  <td className="px-4 py-3 text-zinc-400 font-mono text-[10px]">
+                    {b.chain_tx_hash ? (
+                      <span title={b.chain_tx_hash}>
+                        {b.chain_tx_hash.slice(0, 6)}...{b.chain_tx_hash.slice(-4)}
+                      </span>
+                    ) : (
+                      "—"
+                    )}
                   </td>
                   <td className="px-4 py-3 text-zinc-400 text-xs">
                     {new Date(b.created_at).toLocaleDateString()}

@@ -8,3 +8,8 @@ node_modules/
 contracts/out/
 contracts/cache/
 contracts/broadcast/
+
+# Personal notes — do not push
+COMMANDS.md
+GIT_CHEATSHEET.md
+CHECKLIST.md

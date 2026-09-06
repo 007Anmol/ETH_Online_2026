@@ -62,7 +62,7 @@ export async function getDashboardCounts(orgId: string) {
 export async function getManufacturerProduct(
   id: string,
   orgId: string,
-): Promise<{ product: Product; batch: Batch } | null> {
+): Promise<{ product: Product; batch: Batch; tagId: string | null } | null> {
   const db = createServiceClient();
   const { data: product } = await db
     .from("products")
@@ -80,5 +80,17 @@ export async function getManufacturerProduct(
     .maybeSingle();
 
   if (!batch) return null;
-  return { product: product as Product, batch: batch as Batch };
+
+  let tagId = null;
+  if (product.status === "TAG_BOUND") {
+    const { data: tag } = await db
+      .from("nfc_tags")
+      .select("id")
+      .eq("product_id", id)
+      .eq("status", "BOUND")
+      .maybeSingle();
+    if (tag) tagId = tag.id;
+  }
+
+  return { product: product as Product, batch: batch as Batch, tagId };
 }

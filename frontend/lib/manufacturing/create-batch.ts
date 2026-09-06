@@ -10,6 +10,7 @@ import {
   type CreateBatchInput,
   type Product,
 } from "@/lib/types";
+import { createBatchOnChain, mintBatchOnChain } from "@verichain/hedera";
 
 type CreateBatchContext = {
   organizationId: string;
@@ -22,7 +23,7 @@ export type CreateBatchResult =
 
 /**
  * Team 1 manufacturing write (database).
- * Hedera create-batch / mint-batch will be called from here later via `@verichain/hedera`.
+ * Hedera create-batch / mint-batch are called from here via `@verichain/hedera`.
  */
 export async function createBatch(
   supabase: SupabaseClient<Database>,
@@ -59,6 +60,7 @@ export async function createBatch(
 
   const manufacturing_date = new Date().toISOString().slice(0, 10);
 
+  // 1. Check if it already exists in DB to avoid unnecessary gas spend
   const { data: existing } = await supabase
     .from("batches")
     .select("id")
@@ -69,12 +71,48 @@ export async function createBatch(
     return {
       ok: false,
       status: 409,
-      error: `Batch code "${batch_code}" already exists`,
+      error: `Batch code "${batch_code}" already exists in database`,
     };
   }
 
   const batchIdHash = placeholderHash(batch_code);
+  const slug = batch_code.replace(/[^A-Z0-9]/gi, "").toUpperCase();
+  
+  // Generate products to get their hashes for mintBatch
+  const productRows = Array.from({ length: quantity }, (_, i) => {
+    const serial = String(i + 1).padStart(6, "0");
+    const product_code = `VC-${slug}-${serial}`;
+    const product_id_hash = placeholderHash(product_code);
+    return {
+      product_code,
+      product_id_hash,
+      serial_number: `SN-${batch_code}-${serial}`,
+    };
+  });
 
+  const productIdHashes = productRows.map((p) => p.product_id_hash);
+
+  // 2. [HEDERA] Create Batch On-Chain
+  let createTxHash: string;
+  try {
+    const res = await createBatchOnChain({ batchIdHash, quantity });
+    createTxHash = res.txHash;
+  } catch (err: any) {
+    console.error("[createBatch] Hedera createBatch failed:", err);
+    return { ok: false, status: 500, error: err.message || "Failed to create batch on-chain" };
+  }
+
+  // 3. [HEDERA] Mint Batch On-Chain
+  let mintTxHash: string;
+  try {
+    const res = await mintBatchOnChain({ batchIdHash, productIdHashes });
+    mintTxHash = res.txHash;
+  } catch (err: any) {
+    console.error("[createBatch] Hedera mintBatch failed:", err);
+    return { ok: false, status: 500, error: err.message || "Failed to mint batch on-chain" };
+  }
+
+  // 4. [SUPABASE] Insert Batch
   const { data: batch, error: batchError } = await supabase
     .from("batches")
     .insert({
@@ -88,6 +126,7 @@ export async function createBatch(
       quantity,
       minted_count: quantity,
       status: "MINTED",
+      chain_tx_hash: createTxHash,
       created_by: context.profileId,
     })
     .select()
@@ -95,41 +134,31 @@ export async function createBatch(
 
   if (batchError || !batch) {
     console.error("[createBatch] batch insert:", batchError);
-    return { ok: false, status: 500, error: "Failed to create batch" };
+    return { ok: false, status: 500, error: "Saved on chain, but failed to save batch to DB. Please refresh." };
   }
 
-  const slug = batch_code.replace(/[^A-Z0-9]/gi, "").toUpperCase();
-  const productRows = Array.from({ length: quantity }, (_, i) => {
-    const serial = String(i + 1).padStart(6, "0");
-    const product_code = `VC-${slug}-${serial}`;
-    const product_id_hash = placeholderHash(product_code);
-    return {
-      product_code,
-      product_id_hash,
-      batch_id: batch.id,
-      serial_number: `SN-${batch_code}-${serial}`,
-      manufacturer_org_id: context.organizationId,
-      status: "TAG_PENDING" as const,
-    };
-  });
+  // 5. [SUPABASE] Insert Products
+  const dbProductRows = productRows.map((p) => ({
+    product_code: p.product_code,
+    product_id_hash: p.product_id_hash,
+    batch_id: batch.id,
+    serial_number: p.serial_number,
+    manufacturer_org_id: context.organizationId,
+    status: "TAG_PENDING" as const,
+    chain_tx_hash: mintTxHash,
+  }));
 
   const { data: products, error: productsError } = await supabase
     .from("products")
-    .insert(productRows)
+    .insert(dbProductRows)
     .select();
 
   if (productsError || !products) {
     console.error("[createBatch] products insert:", productsError);
-    await supabase.from("batches").delete().eq("id", batch.id);
-    const uniqueClash =
-      productsError?.code === "23505" ||
-      /duplicate key|unique/i.test(productsError?.message ?? "");
     return {
       ok: false,
-      status: uniqueClash ? 409 : 500,
-      error: uniqueClash
-        ? "This batch code produces product codes that already exist. Choose a more distinct batch code."
-        : "Failed to create product identities",
+      status: 500,
+      error: "Saved on chain, but failed to create product identities in DB. Please refresh.",
     };
   }
 

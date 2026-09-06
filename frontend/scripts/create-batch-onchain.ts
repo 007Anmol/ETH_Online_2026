@@ -1,6 +1,6 @@
 import { createBatchOnChain } from "@verichain/hedera";
 import { HEDERA_REGISTRY_HASHSCAN_URL } from "@verichain/shared";
-import { placeholderHash } from "../lib/crypto/hash";
+import { deriveOnChainId } from "../lib/crypto/hash";
 import { loadEnvFiles } from "./load-env";
 
 loadEnvFiles();
@@ -34,7 +34,7 @@ async function main() {
   }
 
   const batchCode = `SCRIPT-${Date.now()}`;
-  const batchIdHash = placeholderHash(batchCode);
+  const batchIdHash = deriveOnChainId(batchCode);
   const quantity = 1;
 
   console.log("batch_code", batchCode);

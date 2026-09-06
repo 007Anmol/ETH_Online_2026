@@ -7,7 +7,7 @@ import {
   DEMO_PRODUCT_NAME,
   DEMO_SERIAL_NUMBER,
 } from "../lib/constants";
-import { placeholderHash } from "../lib/crypto/hash";
+import { deriveOnChainId } from "../lib/crypto/hash";
 import { PRODUCT_CATEGORIES, isProductCategory } from "../lib/types";
 import { createReporter, deleteHarnessBatches, serviceClient } from "./test-helpers";
 
@@ -41,8 +41,8 @@ async function main() {
       seedBatch.plant_id,
     );
     check(
-      "seed batch hash matches placeholderHash",
-      seedBatch.batch_id_hash === placeholderHash(DEMO_BATCH_CODE),
+      "seed batch hash matches deriveOnChainId",
+      seedBatch.batch_id_hash === deriveOnChainId(DEMO_BATCH_CODE),
       seedBatch.batch_id_hash,
     );
     check(
@@ -90,8 +90,8 @@ async function main() {
       seedProduct.serial_number,
     );
     check(
-      "seed product hash matches placeholderHash",
-      seedProduct.product_id_hash === placeholderHash(DEMO_PRODUCT_CODE),
+      "seed product hash matches deriveOnChainId",
+      seedProduct.product_id_hash === deriveOnChainId(DEMO_PRODUCT_CODE),
     );
     check(
       "seed product is TAG_PENDING or TAG_BOUND",
@@ -110,7 +110,7 @@ async function main() {
   const badCode = "HARNESS-BAD-CAT";
   const { error: invalidCategoryError } = await supabase.from("batches").insert({
     batch_code: badCode,
-    batch_id_hash: placeholderHash(badCode),
+    batch_id_hash: deriveOnChainId(badCode),
     manufacturer_org_id: org.id,
     product_name: "Should Fail",
     plant_id: "TEST-01",
@@ -128,7 +128,7 @@ async function main() {
 
   const { error: missingCategoryError } = await supabase.from("batches").insert({
     batch_code: `${badCode}-NULL`,
-    batch_id_hash: placeholderHash(`${badCode}-NULL`),
+    batch_id_hash: deriveOnChainId(`${badCode}-NULL`),
     manufacturer_org_id: org.id,
     product_name: "Should Fail",
     plant_id: "TEST-01",
@@ -149,7 +149,7 @@ async function main() {
       .from("batches")
       .insert({
         batch_code: code,
-        batch_id_hash: placeholderHash(code),
+        batch_id_hash: deriveOnChainId(code),
         manufacturer_org_id: org.id,
         product_name: `Enum ${category}`,
         product_category: category,

@@ -2,7 +2,7 @@ import {
   DEMO_PRODUCT_CATEGORY,
   DEMO_TAG_UID,
 } from "../lib/constants";
-import { placeholderHash, normalizeTagUid, isTagUid } from "../lib/crypto/hash";
+import { deriveOnChainId, normalizeTagUid, isTagUid } from "../lib/crypto/hash";
 import {
   PRODUCT_CATEGORIES,
   PRODUCT_CATEGORY_LABELS,
@@ -47,17 +47,19 @@ check(
   productCategoryLabel("Luxury watch") === "Luxury watch",
 );
 
-const hash = placeholderHash("SAACHI-DEV-001");
-check("placeholderHash is 0x + 64 hex chars", /^0x[0-9a-f]{64}$/.test(hash), hash);
+const hash = deriveOnChainId("SAACHI-DEV-001");
+check("deriveOnChainId is 0x + 64 hex chars", /^0x[0-9a-f]{64}$/.test(hash), hash);
+
 check(
-  "placeholderHash is stable",
-  placeholderHash("SAACHI-DEV-001") === hash,
+  "deriveOnChainId is stable",
+  deriveOnChainId("SAACHI-DEV-001") === hash,
 );
+
 check(
-  "placeholderHash is keccak256(bytes) matching Foundry",
-  placeholderHash("RADO-2026-001") ===
+  "deriveOnChainId is keccak256(bytes) matching Foundry",
+  deriveOnChainId("RADO-2026-001") ===
     "0xaaf1d3ab1bc79b6e63c36aa15dab306ca0010d1cc0af08ed2768c1a54469161b",
-  placeholderHash("RADO-2026-001"),
+  deriveOnChainId("RADO-2026-001"),
 );
 
 check(

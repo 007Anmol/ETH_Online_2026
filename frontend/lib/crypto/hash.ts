@@ -1,7 +1,7 @@
 import { keccak256, stringToBytes } from "viem";
 
 /** keccak256 of the UTF-8 bytes. Same preimage as Solidity keccak256(bytes(value)). */
-export function placeholderHash(value: string): `0x${string}` {
+export function deriveOnChainId(value: string): `0x${string}` {
   return keccak256(stringToBytes(value));
 }
 

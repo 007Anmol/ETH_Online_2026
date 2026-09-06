@@ -9,7 +9,7 @@ import {
   DEMO_PRODUCT_NAME,
   DEMO_SERIAL_NUMBER,
 } from "../lib/constants";
-import { placeholderHash } from "../lib/crypto/hash";
+import { deriveOnChainId } from "../lib/crypto/hash";
 import { loadEnvFiles } from "./load-env";
 
 async function requireOk(
@@ -75,7 +75,7 @@ async function rehashIdentityRows(supabase: SupabaseClient) {
     .select("id, batch_code, batch_id_hash");
   await requireOk(batchError, "Could not list batches to rehash");
   for (const batch of batches ?? []) {
-    const next = placeholderHash(batch.batch_code);
+    const next = deriveOnChainId(batch.batch_code);
     if (batch.batch_id_hash === next) continue;
     await requireOk(
       (await supabase.from("batches").update({ batch_id_hash: next }).eq("id", batch.id))
@@ -89,7 +89,7 @@ async function rehashIdentityRows(supabase: SupabaseClient) {
     .select("id, product_code, product_id_hash");
   await requireOk(productError, "Could not list products to rehash");
   for (const product of products ?? []) {
-    const next = placeholderHash(product.product_code);
+    const next = deriveOnChainId(product.product_code);
     if (product.product_id_hash === next) continue;
     await requireOk(
       (
@@ -107,7 +107,7 @@ async function rehashIdentityRows(supabase: SupabaseClient) {
     .select("id, tag_uid, tag_id_hash");
   await requireOk(tagError, "Could not list tags to rehash");
   for (const tag of tags ?? []) {
-    const next = placeholderHash(tag.tag_uid);
+    const next = deriveOnChainId(tag.tag_uid);
     if (tag.tag_id_hash === next) continue;
     await requireOk(
       (await supabase.from("nfc_tags").update({ tag_id_hash: next }).eq("id", tag.id))
@@ -200,7 +200,7 @@ async function seed() {
     .upsert(
       {
         batch_code: DEMO_BATCH_CODE,
-        batch_id_hash: placeholderHash(DEMO_BATCH_CODE),
+        batch_id_hash: deriveOnChainId(DEMO_BATCH_CODE),
         manufacturer_org_id: organization.id,
         product_name: DEMO_PRODUCT_NAME,
         product_category: DEMO_PRODUCT_CATEGORY,
@@ -224,7 +224,7 @@ async function seed() {
     .upsert(
       {
         product_code: DEMO_PRODUCT_CODE,
-        product_id_hash: placeholderHash(DEMO_PRODUCT_CODE),
+        product_id_hash: deriveOnChainId(DEMO_PRODUCT_CODE),
         batch_id: batch.id,
         serial_number: DEMO_SERIAL_NUMBER,
         manufacturer_org_id: organization.id,

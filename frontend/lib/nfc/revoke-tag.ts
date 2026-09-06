@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
-import { placeholderHash } from "@/lib/crypto/hash";
+import { deriveOnChainId } from "@/lib/crypto/hash";
 import { revokeTagOnChain } from "@verichain/hedera";
 
 type RevokeInput = {
@@ -41,7 +41,7 @@ export async function revokeTag(
   }
 
   // 2. [HEDERA] Revoke Tag On-Chain
-  const tagIdHash = placeholderHash(tag.tag_uid);
+  const tagIdHash = deriveOnChainId(tag.tag_uid);
   let chainTxHash: string;
   try {
     const res = await revokeTagOnChain({ tagIdHash });

@@ -2,7 +2,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
-import { placeholderHash } from "@/lib/crypto/hash";
+import { deriveOnChainId } from "@/lib/crypto/hash";
 import {
   isProductCategory,
   PRODUCT_CATEGORIES,
@@ -75,14 +75,14 @@ export async function createBatch(
     };
   }
 
-  const batchIdHash = placeholderHash(batch_code);
+  const batchIdHash = deriveOnChainId(batch_code);
   const slug = batch_code.replace(/[^A-Z0-9]/gi, "").toUpperCase();
   
   // Generate products to get their hashes for mintBatch
   const productRows = Array.from({ length: quantity }, (_, i) => {
     const serial = String(i + 1).padStart(6, "0");
     const product_code = `VC-${slug}-${serial}`;
-    const product_id_hash = placeholderHash(product_code);
+    const product_id_hash = deriveOnChainId(product_code);
     return {
       product_code,
       product_id_hash,

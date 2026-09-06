@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
-import { normalizeTagUid, placeholderHash } from "@/lib/crypto/hash";
+import { normalizeTagUid, deriveOnChainId } from "@/lib/crypto/hash";
 import { tapCmacIsValid } from "@/lib/nfc/tap-payload";
 import type { NfcTapPayload, VerificationResult, VerifyProductResponse } from "@/lib/types";
 import { consumeNonceOnChain } from "@verichain/hedera";
@@ -116,8 +116,8 @@ export async function verifyTap(
     };
   }
 
-  const tagIdHash = placeholderHash(tagUid);
-  const nonceHash = placeholderHash(`${tagUid}:${nonce}`);
+  const tagIdHash = deriveOnChainId(tagUid);
+  const nonceHash = deriveOnChainId(`${tagUid}:${nonce}`);
 
   // [HEDERA] Consume nonce on-chain FIRST — blockchain is the authority for replay prevention.
   // If this reverts with NonceAlreadyConsumed, the DB is never touched.

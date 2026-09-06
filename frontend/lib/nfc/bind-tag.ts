@@ -4,7 +4,7 @@ import {
   isTagUid,
   looksLikeUuid,
   normalizeTagUid,
-  placeholderHash,
+  deriveOnChainId,
 } from "@/lib/crypto/hash";
 import type { ProductStatus, TagStatus } from "@/lib/types";
 import { bindTagOnChain } from "@verichain/hedera";
@@ -136,6 +136,19 @@ export async function bindTag(
   let tagId = existingTag?.id;
   let inserted = false;
 
+  // [HEDERA] Bind Tag On-Chain FIRST — blockchain is the authority.
+  const productIdHash = deriveOnChainId(product.product_code);
+  const tagIdHash = deriveOnChainId(tagUid);
+  let chainTxHash: string;
+  try {
+    const res = await bindTagOnChain({ productIdHash, tagIdHash });
+    chainTxHash = res.txHash;
+  } catch (err: any) {
+    console.error("[bindTag] Hedera bindTag failed:", err);
+    return { ok: false, status: 500, error: err.message || "Failed to bind tag on-chain" };
+  }
+
+  // Now that Hedera succeeded, update Supabase
   if (existingTag) {
     const { error: updateError } = await supabase
       .from("nfc_tags")
@@ -145,6 +158,7 @@ export async function bindTag(
         bound_at: now,
         revoked_at: null,
         revoked_reason: null,
+        chain_tx_hash: chainTxHash,
       })
       .eq("id", existingTag.id);
     if (updateError) {
@@ -155,10 +169,11 @@ export async function bindTag(
       .from("nfc_tags")
       .insert({
         tag_uid: tagUid,
-        tag_id_hash: placeholderHash(tagUid),
+        tag_id_hash: tagIdHash,
         product_id: productId,
         status: "BOUND",
         bound_at: now,
+        chain_tx_hash: chainTxHash,
       })
       .select("id")
       .single();
@@ -176,28 +191,6 @@ export async function bindTag(
   if (!tagId) {
     return { ok: false, status: 500, error: "Tag id missing after bind" };
   }
-
-  // [HEDERA] Bind Tag On-Chain
-  const productIdHash = placeholderHash(product.product_code);
-  const tagIdHash = placeholderHash(tagUid);
-  let chainTxHash: string;
-  try {
-    const res = await bindTagOnChain({ productIdHash, tagIdHash });
-    chainTxHash = res.txHash;
-  } catch (err: any) {
-    console.error("[bindTag] Hedera bindTag failed:", err);
-    // Rollback the tag insertion if it was newly created
-    if (inserted) {
-      await supabase.from("nfc_tags").delete().eq("id", tagId);
-    }
-    return { ok: false, status: 500, error: err.message || "Failed to bind tag on-chain" };
-  }
-
-  // Update nfc_tags with chain_tx_hash
-  await supabase
-    .from("nfc_tags")
-    .update({ chain_tx_hash: chainTxHash })
-    .eq("id", tagId);
 
   const previousStatus = product.status;
   const { error: productUpdateError } = await supabase

@@ -10,7 +10,8 @@
     "build": "next build",
     "start": "next start",
     "seed": "tsx scripts/seed.ts",
-    "supabase:check": "tsx scripts/check-supabase.ts"
+    "supabase:check": "tsx scripts/check-supabase.ts",
+    "test:nfc": "tsx scripts/test-bind.ts && tsx scripts/test-verify.ts && tsx scripts/test-simulate.ts && tsx scripts/test-nfc-flow.ts && tsx scripts/test-http.ts && tsx scripts/test-edges.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.78.0",

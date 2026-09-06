@@ -67,6 +67,7 @@ export type BindTagInput = {
 
 export type VerifyProductResponse = {
   result: VerificationResult;
+  product_id?: string;
   product_code?: string;
   batch_code?: string;
   product_name?: string;

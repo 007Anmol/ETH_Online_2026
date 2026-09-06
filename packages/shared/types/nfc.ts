@@ -76,6 +76,7 @@ export type VerifyProductResponse = {
   manufacturing_date?: string;
   plant_id?: string;
   failure_reason?: string;
+  chain_tx_hash?: string;
 };
 
 export type ProductEvent = {

@@ -74,6 +74,7 @@ export async function revokeTag(
       product_id: tag.product_id,
       action: "REVOKED",
       performed_by: input.performed_by ?? null,
+      chain_tx_hash: chainTxHash,
     });
 
     const { data: product } = await supabase
@@ -89,6 +90,7 @@ export async function revokeTag(
         batch_id: product.batch_id,
         tag_id: tag_id,
         payload: { tag_uid: tag.tag_uid, reason, chain_tx_hash: chainTxHash },
+        chain_tx_hash: chainTxHash,
       });
     }
   }

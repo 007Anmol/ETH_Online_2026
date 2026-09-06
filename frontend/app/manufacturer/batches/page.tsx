@@ -4,6 +4,7 @@ import { manufacturerBatchesQuery } from "@/lib/manufacturing";
 import { getSession } from "@/lib/session";
 import { createServiceClient } from "@/lib/supabase";
 import { productCategoryLabel, type Batch } from "@/lib/types";
+import { HashScanLink } from "@/components/ui/hashscan-link";
 
 export const metadata = { title: "Batches — VeriChain" };
 
@@ -70,14 +71,8 @@ export default async function BatchesPage() {
                   <td className="px-4 py-3">
                     <StatusBadge status={b.status} />
                   </td>
-                  <td className="px-4 py-3 text-zinc-400 font-mono text-[10px]">
-                    {b.chain_tx_hash ? (
-                      <span title={b.chain_tx_hash}>
-                        {b.chain_tx_hash.slice(0, 6)}...{b.chain_tx_hash.slice(-4)}
-                      </span>
-                    ) : (
-                      "—"
-                    )}
+                  <td className="px-4 py-3">
+                    {b.chain_tx_hash ? <HashScanLink txHash={b.chain_tx_hash} /> : <span className="text-zinc-400 font-mono text-[10px]">—</span>}
                   </td>
                   <td className="px-4 py-3 text-zinc-400 text-xs">
                     {new Date(b.created_at).toLocaleDateString()}

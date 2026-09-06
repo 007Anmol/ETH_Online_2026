@@ -4,6 +4,7 @@ import { getManufacturerProduct } from "@/lib/manufacturing";
 import { getSession } from "@/lib/session";
 import { productCategoryLabel } from "@/lib/types";
 import { RevokeButton } from "./revoke-button";
+import { HashScanLink } from "@/components/ui/hashscan-link";
 
 export const metadata = { title: "Product detail — VeriChain" };
 
@@ -57,7 +58,12 @@ export default async function ProductDetailPage({ params }: Props) {
             <Field label="Status" value={product.status} />
             <Field label="Serial number" value={product.serial_number} mono />
             <Field label="Created" value={new Date(product.created_at).toLocaleString()} />
-            <Field label="Chain TX" value={product.chain_tx_hash ?? "—"} mono />
+            <div>
+              <dt className="text-xs font-medium text-zinc-400">Chain TX</dt>
+              <dd className="mt-0.5">
+                {product.chain_tx_hash ? <HashScanLink txHash={product.chain_tx_hash} /> : <span className="font-mono text-xs text-zinc-800">—</span>}
+              </dd>
+            </div>
             <Field label="Token ID" value={product.token_id?.toString() ?? "—"} />
           </dl>
         </div>
@@ -101,6 +107,46 @@ export default async function ProductDetailPage({ params }: Props) {
           )}
         </div>
       </div>
+
+      {/* Blockchain Events */}
+      {result.events.length > 0 && (
+        <div className="mt-8 rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
+          <div className="border-b border-zinc-100 px-6 py-5">
+            <h2 className="text-sm font-semibold text-zinc-900">Blockchain Events</h2>
+            <p className="mt-1 text-xs text-zinc-500">
+              Immutable history anchored on the Hedera Testnet.
+            </p>
+          </div>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-zinc-100 bg-zinc-50 text-left text-xs font-medium uppercase tracking-wider text-zinc-500">
+                <th className="px-6 py-3">Event</th>
+                <th className="px-6 py-3">Chain TX</th>
+                <th className="px-6 py-3 text-right">Date</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-100">
+              {result.events.map((event) => (
+                <tr key={event.id} className="hover:bg-zinc-50">
+                  <td className="px-6 py-3 font-medium text-zinc-900 text-xs">
+                    {event.event_type.replace(/_/g, " ")}
+                  </td>
+                  <td className="px-6 py-3">
+                    {event.chain_tx_hash ? (
+                      <HashScanLink txHash={event.chain_tx_hash} />
+                    ) : (
+                      <span className="text-zinc-400 font-mono text-[10px]">—</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-3 text-right text-xs text-zinc-500">
+                    {new Date(event.occurred_at).toLocaleString()}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </main>
   );
 }

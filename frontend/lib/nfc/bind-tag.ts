@@ -222,6 +222,7 @@ export async function bindTag(
       product_id: productId,
       action: "BOUND",
       performed_by: input.performed_by ?? null,
+      chain_tx_hash: chainTxHash,
     });
   if (historyError) {
     await rollbackBind(supabase, {
@@ -240,6 +241,7 @@ export async function bindTag(
     batch_id: product.batch_id,
     tag_id: tagId,
     payload: { tag_uid: tagUid, product_code: product.product_code },
+    chain_tx_hash: chainTxHash,
   });
   if (eventError) {
     await rollbackBind(supabase, {

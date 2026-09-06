@@ -62,7 +62,7 @@ export async function getDashboardCounts(orgId: string) {
 export async function getManufacturerProduct(
   id: string,
   orgId: string,
-): Promise<{ product: Product; batch: Batch; tagId: string | null } | null> {
+): Promise<{ product: Product; batch: Batch; tagId: string | null; events: import("@/lib/types").ProductEvent[] } | null> {
   const db = createServiceClient();
   const { data: product } = await db
     .from("products")
@@ -92,5 +92,16 @@ export async function getManufacturerProduct(
     if (tag) tagId = tag.id;
   }
 
-  return { product: product as Product, batch: batch as Batch, tagId };
+  const { data: events } = await db
+    .from("product_events")
+    .select("*")
+    .eq("product_id", id)
+    .order("occurred_at", { ascending: false });
+
+  return { 
+    product: product as Product, 
+    batch: batch as Batch, 
+    tagId,
+    events: (events ?? []) as import("@/lib/types").ProductEvent[]
+  };
 }

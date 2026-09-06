@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase";
 import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
-import type { Product, Batch } from "@/lib/types";
+import { productCategoryLabel, type Product, type Batch } from "@/lib/types";
 
 export const metadata = { title: "Product detail — VeriChain" };
 
@@ -94,9 +94,8 @@ export default async function ProductDetailPage({ params }: Props) {
             <Field label="Product name" value={batch.product_name} />
             <Field label="Plant" value={batch.plant_id} mono />
             <Field label="Manufactured" value={batch.manufacturing_date} />
-            <Field label="Expiry" value={batch.expiry_date ?? "—"} />
             <Field label="Quantity" value={`${batch.minted_count} / ${batch.quantity}`} />
-            <Field label="Category" value={batch.product_category ?? "—"} />
+            <Field label="Category" value={productCategoryLabel(batch.product_category)} />
           </dl>
         </div>
 

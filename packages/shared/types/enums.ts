@@ -40,6 +40,31 @@ export type Permission = (typeof PERMISSIONS)[number];
 export const BATCH_STATUSES = ["CREATED", "MINTED"] as const;
 export type BatchStatus = (typeof BATCH_STATUSES)[number];
 
+/** Luxury-item categories. Must match the Postgres `product_category` enum. */
+export const PRODUCT_CATEGORIES = [
+  "WATCHES",
+  "SHOES",
+  "BAGS",
+  "APPAREL",
+] as const;
+export type ProductCategory = (typeof PRODUCT_CATEGORIES)[number];
+
+export const PRODUCT_CATEGORY_LABELS: Record<ProductCategory, string> = {
+  WATCHES: "Watches",
+  SHOES: "Shoes",
+  BAGS: "Bags",
+  APPAREL: "Apparel",
+};
+
+export function isProductCategory(value: string): value is ProductCategory {
+  return (PRODUCT_CATEGORIES as readonly string[]).includes(value);
+}
+
+export function productCategoryLabel(value: string | null | undefined): string {
+  if (!value) return "—";
+  return isProductCategory(value) ? PRODUCT_CATEGORY_LABELS[value] : value;
+}
+
 export const PRODUCT_STATUSES = [
   "CREATED",
   "MINTED",

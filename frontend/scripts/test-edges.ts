@@ -166,13 +166,15 @@ async function main() {
       result?: string;
       batch_code?: string;
       plant_id?: string;
+      product_category?: string;
     };
     check(
       "HTTP verify AUTHENTIC has factory fields",
       first.ok &&
         firstBody.result === "AUTHENTIC" &&
         firstBody.batch_code === "SAACHI-DEV-001" &&
-        firstBody.plant_id === "MH-01",
+        firstBody.plant_id === "MH-01" &&
+        firstBody.product_category === "WATCHES",
     );
 
     const replay = await fetch(`${BASE}/api/nfc/verify`, {

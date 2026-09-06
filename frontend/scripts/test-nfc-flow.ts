@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import {
+  DEMO_PRODUCT_CATEGORY,
   DEMO_PRODUCT_CODE,
   DEMO_TAG_UID,
   SHARED_DEMO_BATCH_CODE,
@@ -76,7 +77,8 @@ async function main() {
       check(
         "simulate → verify is AUTHENTIC",
         authentic.result === "AUTHENTIC" &&
-          authentic.product_code === DEMO_PRODUCT_CODE,
+          authentic.product_code === DEMO_PRODUCT_CODE &&
+          authentic.product_category === DEMO_PRODUCT_CATEGORY,
         authentic.result,
       );
       const duplicate = await verifyTap(supabase, simulated.payload);

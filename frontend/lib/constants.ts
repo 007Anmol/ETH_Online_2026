@@ -11,6 +11,7 @@ export const DEMO_BATCH_CODE = "SAACHI-DEV-001";
 export const DEMO_PRODUCT_CODE = "VC-SAACHI-000001";
 export const DEMO_SERIAL_NUMBER = "SN-SAACHI-000001";
 export const DEMO_PRODUCT_NAME = "Rado HyperChrome";
+export const DEMO_PRODUCT_CATEGORY = "WATCHES" as const;
 export const DEMO_PLANT_ID = "MH-01";
 export const DEMO_TAG_UID = "04DEADBEEF01";
 

@@ -2,7 +2,7 @@ import "server-only";
 
 import { looksLikeUuid } from "@/lib/crypto/hash";
 import { createServiceClient } from "@/lib/supabase";
-import type { ProductStatus, VerificationResult } from "@/lib/types";
+import type { ProductCategory, ProductStatus, VerificationResult } from "@/lib/types";
 
 export type PublicProductAttempt = {
   id: string;
@@ -16,6 +16,7 @@ export type PublicProduct = {
   serial_number: string;
   status: ProductStatus;
   product_name: string;
+  product_category: ProductCategory | null;
   batch_code: string;
   manufacturing_date: string;
   plant_id: string;
@@ -43,7 +44,7 @@ export async function getPublicProduct(
   const [{ data: batch }, { data: tag }, { data: attempts }] = await Promise.all([
     supabase
       .from("batches")
-      .select("batch_code, product_name, manufacturing_date, plant_id")
+      .select("batch_code, product_name, product_category, manufacturing_date, plant_id")
       .eq("id", product.batch_id)
       .maybeSingle(),
     supabase
@@ -66,6 +67,7 @@ export async function getPublicProduct(
     serial_number: product.serial_number,
     status: product.status,
     product_name: batch?.product_name ?? "Unknown product",
+    product_category: batch?.product_category ?? null,
     batch_code: batch?.batch_code ?? "—",
     manufacturing_date: batch?.manufacturing_date ?? "",
     plant_id: batch?.plant_id ?? "—",

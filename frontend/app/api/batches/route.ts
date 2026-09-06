@@ -2,7 +2,8 @@ import { NextRequest } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
 import { getSession } from "@/lib/session";
 import { json } from "@/lib/api/http";
-import type { CreateBatchInput } from "@/lib/types";
+import { placeholderHash } from "@/lib/crypto/hash";
+import { isProductCategory, PRODUCT_CATEGORIES, type CreateBatchInput } from "@/lib/types";
 
 // ─── POST /api/batches ────────────────────────────────────────────────────────
 // Creates one batch row + N product rows (quantity = body.quantity).
@@ -21,45 +22,55 @@ export async function POST(req: NextRequest) {
     return json({ error: "Invalid JSON body" }, 400);
   }
 
-  const { product_name, batch_code, plant_id, manufacturing_date, expiry_date, quantity, product_category } = body;
+  const product_name = body.product_name?.trim() ?? "";
+  const batch_code = body.batch_code?.trim() ?? "";
+  const plant_id = body.plant_id?.trim() ?? "";
+  const { quantity, product_category } = body;
 
-  // Validate required fields
-  if (!product_name?.trim()) return json({ error: "product_name is required" }, 400);
-  if (!batch_code?.trim()) return json({ error: "batch_code is required" }, 400);
-  if (!plant_id?.trim()) return json({ error: "plant_id is required" }, 400);
-  if (!manufacturing_date?.trim()) return json({ error: "manufacturing_date is required" }, 400);
-  if (!quantity || quantity <= 0 || !Number.isInteger(quantity)) return json({ error: "quantity must be a positive integer" }, 400);
+  if (!product_name) return json({ error: "product_name is required" }, 400);
+  if (!batch_code) return json({ error: "batch_code is required" }, 400);
+  if (!plant_id) return json({ error: "plant_id is required" }, 400);
+  if (!quantity || quantity <= 0 || !Number.isInteger(quantity)) {
+    return json({ error: "quantity must be a positive integer" }, 400);
+  }
+  if (quantity > 100) {
+    return json({ error: "quantity cannot exceed 100" }, 400);
+  }
+  if (!product_category || !isProductCategory(product_category)) {
+    return json(
+      { error: `product_category must be ${PRODUCT_CATEGORIES.join(", ")}` },
+      400,
+    );
+  }
+
+  const manufacturing_date = new Date().toISOString().slice(0, 10);
 
   const db = createServiceClient();
 
-  // Reject duplicate batch_code
   const { data: existing } = await db
     .from("batches")
     .select("id")
-    .eq("batch_code", batch_code.trim())
+    .eq("batch_code", batch_code)
     .maybeSingle();
 
   if (existing) {
     return json({ error: `Batch code "${batch_code}" already exists` }, 409);
   }
 
-  // Derive a deterministic batch_id_hash (simple hex encode for Phase 1 — keccak in Phase 2)
-  const batchIdHash = Buffer.from(batch_code.trim()).toString("hex").padStart(64, "0").slice(0, 64);
+  const batchIdHash = placeholderHash(batch_code);
 
-  // Insert batch
   const { data: batch, error: batchError } = await db
     .from("batches")
     .insert({
-      batch_code: batch_code.trim(),
+      batch_code,
       batch_id_hash: batchIdHash,
       manufacturer_org_id: session.organizationId,
-      product_name: product_name.trim(),
-      product_category: product_category?.trim() ?? null,
-      plant_id: plant_id.trim(),
+      product_name,
+      product_category,
+      plant_id,
       manufacturing_date,
-      expiry_date: expiry_date ?? null,
       quantity,
-      minted_count: quantity,      // Phase 1: all minted instantly (no real chain call)
+      minted_count: quantity,
       status: "MINTED",
       created_by: session.profileId,
     })
@@ -71,13 +82,11 @@ export async function POST(req: NextRequest) {
     return json({ error: "Failed to create batch" }, 500);
   }
 
-  // Insert N product rows
+  const slug = batch_code.replace(/[^A-Z0-9]/gi, "").toUpperCase();
   const productRows = Array.from({ length: quantity }, (_, i) => {
     const serial = String(i + 1).padStart(6, "0");
-    // product_code format: VC-<BATCHCODE_SLUG>-<SERIAL>
-    const slug = batch_code.replace(/[^A-Z0-9]/gi, "").toUpperCase().slice(0, 8);
     const product_code = `VC-${slug}-${serial}`;
-    const product_id_hash = Buffer.from(product_code).toString("hex").padStart(64, "0").slice(0, 64);
+    const product_id_hash = placeholderHash(product_code);
     return {
       product_code,
       product_id_hash,
@@ -95,9 +104,18 @@ export async function POST(req: NextRequest) {
 
   if (productsError || !products) {
     console.error("[POST /api/batches] products insert:", productsError);
-    // Roll back batch if products fail
     await db.from("batches").delete().eq("id", batch.id);
-    return json({ error: "Failed to create product identities" }, 500);
+    const uniqueClash =
+      productsError?.code === "23505" ||
+      /duplicate key|unique/i.test(productsError?.message ?? "");
+    return json(
+      {
+        error: uniqueClash
+          ? "This batch code produces product codes that already exist. Choose a more distinct batch code."
+          : "Failed to create product identities",
+      },
+      uniqueClash ? 409 : 500,
+    );
   }
 
   return json({ batch, products }, 201);

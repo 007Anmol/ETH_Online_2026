@@ -2,7 +2,7 @@ import Link from "next/link";
 import { createServiceClient } from "@/lib/supabase";
 import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
-import type { Batch } from "@/lib/types";
+import { productCategoryLabel, type Batch } from "@/lib/types";
 
 export const metadata = { title: "Batches — VeriChain" };
 
@@ -50,6 +50,7 @@ export default async function BatchesPage() {
               <tr className="border-b border-zinc-100 bg-zinc-50 text-left text-xs font-medium uppercase tracking-wider text-zinc-500">
                 <th className="px-4 py-3">Batch code</th>
                 <th className="px-4 py-3">Product</th>
+                <th className="px-4 py-3">Category</th>
                 <th className="px-4 py-3">Plant</th>
                 <th className="px-4 py-3">Qty</th>
                 <th className="px-4 py-3">Status</th>
@@ -64,6 +65,9 @@ export default async function BatchesPage() {
                     {b.batch_code}
                   </td>
                   <td className="px-4 py-3 text-zinc-700">{b.product_name}</td>
+                  <td className="px-4 py-3 text-zinc-500">
+                    {productCategoryLabel(b.product_category)}
+                  </td>
                   <td className="px-4 py-3 text-zinc-500">{b.plant_id}</td>
                   <td className="px-4 py-3 text-zinc-700">{b.quantity}</td>
                   <td className="px-4 py-3">

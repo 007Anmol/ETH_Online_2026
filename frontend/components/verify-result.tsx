@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { formatDisplayDate } from "@/lib/format";
-import type { VerifyProductResponse } from "@/lib/types";
+import { productCategoryLabel, type VerifyProductResponse } from "@/lib/types";
 
 export type VerifyView = VerifyProductResponse;
 
@@ -42,6 +42,7 @@ function ProductFacts({
     <dl className="mt-4">
       <Fact tone={tone} label="Product" value={view.product_name ?? view.product_code} />
       <Fact tone={tone} label="Product code" value={view.product_code} />
+      <Fact tone={tone} label="Category" value={productCategoryLabel(view.product_category)} />
       <Fact tone={tone} label="Batch" value={view.batch_code} />
       <Fact tone={tone} label="Date" value={formatDisplayDate(view.manufacturing_date)} />
       <Fact tone={tone} label="Plant" value={view.plant_id} />

@@ -4,6 +4,7 @@ import {
   DEMO_MANUFACTURER_NAME,
   DEMO_MANUFACTURER_WALLET,
   DEMO_PLANT_ID,
+  DEMO_PRODUCT_CATEGORY,
   DEMO_PRODUCT_CODE,
   DEMO_PRODUCT_NAME,
   DEMO_SERIAL_NUMBER,
@@ -129,15 +130,22 @@ async function seed() {
   );
   await requireOk(permError, "Failed to upsert permissions");
 
-  await requireOk(
-    (
-      await supabase
-        .from("batches")
-        .delete()
-        .eq("batch_code", "SAACHI-SEED-001")
-    ).error,
-    "Could not remove leftover seed batch",
-  );
+  const leftoverCode = "SAACHI-SEED-001";
+  const { data: leftover } = await supabase
+    .from("batches")
+    .select("id")
+    .eq("batch_code", leftoverCode)
+    .maybeSingle();
+  if (leftover) {
+    await requireOk(
+      (await supabase.from("products").delete().eq("batch_id", leftover.id)).error,
+      "Could not remove leftover seed products",
+    );
+    await requireOk(
+      (await supabase.from("batches").delete().eq("id", leftover.id)).error,
+      "Could not remove leftover seed batch",
+    );
+  }
 
   const { data: batch, error: batchError } = await supabase
     .from("batches")
@@ -147,6 +155,7 @@ async function seed() {
         batch_id_hash: placeholderHash(DEMO_BATCH_CODE),
         manufacturer_org_id: organization.id,
         product_name: DEMO_PRODUCT_NAME,
+        product_category: DEMO_PRODUCT_CATEGORY,
         plant_id: DEMO_PLANT_ID,
         manufacturing_date: "2026-09-06",
         quantity: 1,

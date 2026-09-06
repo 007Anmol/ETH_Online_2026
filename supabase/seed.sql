@@ -1,5 +1,5 @@
 -- Phase 1 demo manufacturer. Safe to re-run.
--- Wallet must match frontend/lib/constants.ts DEMO_MANUFACTURER_WALLET
+-- Values must match frontend/lib/constants.ts (wallet, batch, product, category).
 
 insert into organizations (name, type, wallet_address, world_id_verified)
 values (
@@ -49,6 +49,7 @@ insert into batches (
   batch_id_hash,
   manufacturer_org_id,
   product_name,
+  product_category,
   plant_id,
   manufacturing_date,
   quantity,
@@ -60,6 +61,7 @@ select
   '0x' || encode(sha256('SAACHI-DEV-001'::bytea), 'hex'),
   organizations.id,
   'Rado HyperChrome',
+  'WATCHES',
   'MH-01',
   '2026-09-06',
   1,
@@ -69,7 +71,11 @@ from organizations
 where organizations.wallet_address = '0x1111111111111111111111111111111111111111'
 on conflict (batch_code) do update
 set status = excluded.status,
-    minted_count = excluded.minted_count;
+    minted_count = excluded.minted_count,
+    product_name = excluded.product_name,
+    product_category = excluded.product_category,
+    plant_id = excluded.plant_id,
+    manufacturing_date = excluded.manufacturing_date;
 
 insert into products (
   product_code,

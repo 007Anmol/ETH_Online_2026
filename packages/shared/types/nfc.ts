@@ -1,4 +1,5 @@
 import type {
+  ProductCategory,
   ProductEventType,
   TagBindingAction,
   TagStatus,
@@ -71,6 +72,7 @@ export type VerifyProductResponse = {
   product_code?: string;
   batch_code?: string;
   product_name?: string;
+  product_category?: ProductCategory;
   manufacturing_date?: string;
   plant_id?: string;
   failure_reason?: string;

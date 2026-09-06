@@ -35,6 +35,8 @@ async function main() {
   check("GET /product/:code", product.ok);
   check("product shows batch", productHtml.includes("SAACHI-DEV-001"));
   check("product shows plant", productHtml.includes("MH-01"));
+  check("product shows Watches category", productHtml.includes("Watches"));
+  check("product does not show Expiry", !/expir/i.test(productHtml));
   check("product shows factory record", productHtml.includes("Factory record"));
 
   const shared = await fetch(`${BASE}/product/VC-RADO2026-000001`);

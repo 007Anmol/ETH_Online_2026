@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { randomBytes } from "node:crypto";
-import { DEMO_PRODUCT_CODE, DEMO_TAG_UID } from "../lib/constants";
+import { DEMO_BATCH_CODE, DEMO_PLANT_ID, DEMO_PRODUCT_CATEGORY, DEMO_PRODUCT_CODE, DEMO_TAG_UID } from "../lib/constants";
 import type { Database } from "../lib/database.types";
 import { aesCmac, parseAes128Key } from "../lib/nfc/cmac";
 import { bindTag } from "../lib/nfc/bind-tag";
@@ -92,7 +92,11 @@ async function main() {
   const first = await verifyTap(supabase, payload);
   check(
     "new signed tap is AUTHENTIC",
-    first.result === "AUTHENTIC" && first.product_code === DEMO_PRODUCT_CODE,
+    first.result === "AUTHENTIC" &&
+      first.product_code === DEMO_PRODUCT_CODE &&
+      first.product_category === DEMO_PRODUCT_CATEGORY &&
+      first.batch_code === DEMO_BATCH_CODE &&
+      first.plant_id === DEMO_PLANT_ID,
     JSON.stringify(first),
   );
 

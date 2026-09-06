@@ -248,6 +248,7 @@ function publicFacts(
     product_code: facts.product_code,
     batch_code: facts.batch_code,
     product_name: facts.product_name,
+    product_category: facts.product_category,
     manufacturing_date: facts.manufacturing_date,
     plant_id: facts.plant_id,
   };
@@ -266,7 +267,7 @@ async function loadProductFacts(
   const { data: batch } = product
     ? await supabase
         .from("batches")
-        .select("batch_code, product_name, manufacturing_date, plant_id")
+        .select("batch_code, product_name, product_category, manufacturing_date, plant_id")
         .eq("id", product.batch_id)
         .maybeSingle()
     : { data: null };
@@ -277,6 +278,7 @@ async function loadProductFacts(
     batch_id: product?.batch_id ?? null,
     batch_code: batch?.batch_code,
     product_name: batch?.product_name,
+    product_category: batch?.product_category,
     manufacturing_date: batch?.manufacturing_date ?? undefined,
     plant_id: batch?.plant_id,
   };

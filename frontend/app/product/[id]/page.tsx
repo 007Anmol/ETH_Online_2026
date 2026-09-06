@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { VerifyResult } from "@/components/verify-result";
 import { formatDisplayDate, formatDisplayWhen } from "@/lib/format";
 import { getPublicProduct } from "@/lib/nfc/get-public-product";
-import type { ProductStatus, VerificationResult } from "@/lib/types";
+import { productCategoryLabel, type ProductStatus, type VerificationResult } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +39,7 @@ export default async function ProductPage({
         product_code: product.product_code,
         batch_code: product.batch_code,
         product_name: product.product_name,
+        product_category: product.product_category ?? undefined,
         manufacturing_date: product.manufacturing_date,
         plant_id: product.plant_id,
       }
@@ -79,6 +80,12 @@ export default async function ProductPage({
             <div className="flex justify-between gap-4">
               <dt className="text-zinc-500">Product code</dt>
               <dd className="font-mono text-zinc-900">{product.product_code}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-zinc-500">Category</dt>
+              <dd className="font-medium text-zinc-900">
+                {productCategoryLabel(product.product_category)}
+              </dd>
             </div>
             <div className="flex justify-between gap-4">
               <dt className="text-zinc-500">Batch</dt>

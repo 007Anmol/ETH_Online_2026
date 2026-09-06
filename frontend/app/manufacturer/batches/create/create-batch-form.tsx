@@ -2,7 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import type { CreateBatchInput } from "@/lib/types";
+import {
+  PRODUCT_CATEGORIES,
+  PRODUCT_CATEGORY_LABELS,
+  type CreateBatchInput,
+  type ProductCategory,
+} from "@/lib/types";
 
 export function CreateBatchForm() {
   const router = useRouter();
@@ -13,10 +18,8 @@ export function CreateBatchForm() {
     product_name: "",
     batch_code: "",
     plant_id: "",
-    manufacturing_date: new Date().toISOString().split("T")[0],
-    expiry_date: null,
     quantity: 3,
-    product_category: "",
+    product_category: "WATCHES",
   });
 
   function set<K extends keyof CreateBatchInput>(key: K, value: CreateBatchInput[K]) {
@@ -89,13 +92,13 @@ export function CreateBatchForm() {
         </Field>
 
         {/* Quantity */}
-        <Field label="Quantity" required hint="Min 1">
+        <Field label="Quantity" required hint="1–100">
           <input
             id="quantity"
             type="number"
             min={1}
             max={100}
-            value={form.quantity}
+            value={Number.isFinite(form.quantity) ? form.quantity : ""}
             onChange={(e) => set("quantity", parseInt(e.target.value, 10))}
             required
             className="input"
@@ -103,41 +106,20 @@ export function CreateBatchForm() {
         </Field>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        {/* Manufacturing date */}
-        <Field label="Manufacturing date" required>
-          <input
-            id="manufacturing_date"
-            type="date"
-            value={form.manufacturing_date}
-            onChange={(e) => set("manufacturing_date", e.target.value)}
-            required
-            className="input"
-          />
-        </Field>
-
-        {/* Expiry date */}
-        <Field label="Expiry date" hint="Optional">
-          <input
-            id="expiry_date"
-            type="date"
-            value={form.expiry_date ?? ""}
-            onChange={(e) => set("expiry_date", e.target.value || null)}
-            className="input"
-          />
-        </Field>
-      </div>
-
-      {/* Category */}
-      <Field label="Product category" hint="Optional">
-        <input
+      <Field label="Product category" required hint="Luxury items">
+        <select
           id="product_category"
-          type="text"
-          placeholder="Luxury watch"
-          value={form.product_category ?? ""}
-          onChange={(e) => set("product_category", e.target.value)}
+          value={form.product_category}
+          onChange={(e) => set("product_category", e.target.value as ProductCategory)}
+          required
           className="input"
-        />
+        >
+          {PRODUCT_CATEGORIES.map((category) => (
+            <option key={category} value={category}>
+              {PRODUCT_CATEGORY_LABELS[category]}
+            </option>
+          ))}
+        </select>
       </Field>
 
       {error && (

@@ -1,6 +1,7 @@
 import type {
   BatchStatus,
   ManufacturingOperationType,
+  ProductCategory,
   ProductStatus,
 } from "./enums";
 
@@ -10,10 +11,9 @@ export type Batch = {
   batch_id_hash: string;
   manufacturer_org_id: string;
   product_name: string;
-  product_category: string | null;
+  product_category: ProductCategory;
   plant_id: string;
   manufacturing_date: string;
-  expiry_date: string | null;
   quantity: number;
   minted_count: number;
   status: BatchStatus;
@@ -55,8 +55,6 @@ export type CreateBatchInput = {
   product_name: string;
   batch_code: string;
   plant_id: string;
-  manufacturing_date: string;
-  expiry_date?: string | null;
   quantity: number;
-  product_category?: string | null;
+  product_category: ProductCategory;
 };

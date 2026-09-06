@@ -6,6 +6,7 @@ import type {
   ManufacturingOperationType,
   OrganizationType,
   Permission,
+  ProductCategory,
   ProductEventType,
   ProductStatus,
   ResaleStatus,
@@ -88,10 +89,9 @@ export type Database = {
           batch_id_hash: string;
           manufacturer_org_id: string;
           product_name: string;
-          product_category: string | null;
+          product_category: ProductCategory;
           plant_id: string;
           manufacturing_date: string;
-          expiry_date: string | null;
           quantity: number;
           minted_count: number;
           status: BatchStatus;
@@ -106,10 +106,9 @@ export type Database = {
           batch_id_hash: string;
           manufacturer_org_id: string;
           product_name: string;
-          product_category?: string | null;
+          product_category: ProductCategory;
           plant_id: string;
-          manufacturing_date: string;
-          expiry_date?: string | null;
+          manufacturing_date?: string;
           quantity: number;
           minted_count?: number;
           status?: BatchStatus;
@@ -382,6 +381,7 @@ export type Database = {
       organization_type: OrganizationType;
       permission: Permission;
       batch_status: BatchStatus;
+      product_category: ProductCategory;
       product_status: ProductStatus;
       tag_status: TagStatus;
       verification_result: VerificationResult;

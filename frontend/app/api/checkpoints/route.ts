@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { evaluateTelemetry, type TelemetryPoint } from "@/lib/risk";
+import { SupabaseStore } from "../../../../services/agent/src/supabase";
 
 type CheckpointRequest = {
   current: TelemetryPoint;
   previous?: TelemetryPoint;
   recent?: TelemetryPoint[];
+  requestId?: string;
 };
 
 function isTelemetryPoint(value: unknown): value is TelemetryPoint {
@@ -38,9 +40,23 @@ export async function POST(request: Request) {
   }
 
   const result = evaluateTelemetry(body.current, body.previous, body.recent);
+  const requestId = body.requestId ?? crypto.randomUUID();
+
+  try {
+    const store = new SupabaseStore();
+    if (await store.hasProcessed(requestId)) {
+      return NextResponse.json({ error: "Checkpoint request already processed" }, { status: 409 });
+    }
+    await store.saveCheckpoint({ requestId, point: body.current, riskScore: result.riskScore });
+    if (result.shouldFreeze) {
+      await store.saveAnomaly({ requestId, result, status: "OPEN" });
+    }
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Persistence failed" }, { status: 503 });
+  }
 
   return NextResponse.json({
-    productId: body.current.productId,
+    requestId,
     checkpoint: body.current.checkpoint,
     ...result,
     action: result.riskScore >= 61 ? "RECORD_AND_FREEZE" : "RECORD_ONLY",

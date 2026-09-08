@@ -38,6 +38,10 @@ contract MockEscrow {
     }
 }
 
+import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
+import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
+import {HookMiner} from "v4-periphery/test/shared/HookMiner.sol";
+
 contract VeriChainHookTest is Test {
     VeriChainHook hook;
     MockStatusRegistry registry;
@@ -49,10 +53,22 @@ contract VeriChainHookTest is Test {
         registry = new MockStatusRegistry();
         escrow = new MockEscrow();
 
-        hook = new VeriChainHook(
+        IPoolManager mockManager = IPoolManager(makeAddr("MockPoolManager"));
+        uint160 flags = uint160(Hooks.BEFORE_SWAP_FLAG);
+        bytes memory constructorArgs = abi.encode(mockManager, address(registry), address(escrow));
+        (address hookAddress, bytes32 salt) = HookMiner.find(
+            address(this),
+            flags,
+            type(VeriChainHook).creationCode,
+            constructorArgs
+        );
+
+        hook = new VeriChainHook{salt: salt}(
+            mockManager,
             address(registry),
             address(escrow)
         );
+        require(address(hook) == hookAddress, "Hook address mismatch");
     }
 
     function testCanSettleNormalProduct() public {

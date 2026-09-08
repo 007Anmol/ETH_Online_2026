@@ -99,4 +99,94 @@ export class SupabaseStore implements AnomalyStore, PaymentStore {
       body: JSON.stringify({ status: "RESOLVED", resolved_at: new Date().toISOString() }),
     });
   }
+
+  async getShipments(filters?: { productId?: string; status?: string; sender?: string; receiver?: string }): Promise<any[]> {
+    const params: string[] = [];
+    if (filters?.productId) params.push(`product_id=eq.${encodeURIComponent(filters.productId)}`);
+    if (filters?.status) params.push(`status=eq.${encodeURIComponent(filters.status)}`);
+    if (filters?.sender) params.push(`sender=eq.${encodeURIComponent(filters.sender)}`);
+    if (filters?.receiver) params.push(`receiver=eq.${encodeURIComponent(filters.receiver)}`);
+    const query = params.length > 0 ? `?${params.join("&")}&order=created_at.desc` : "?order=created_at.desc";
+    return (await supabaseRequest<any[]>(`shipments${query}`)) ?? [];
+  }
+
+  async saveShipment(shipment: { id: number | string; product_id: number | string; sender: string; receiver: string; status: string; tx_hash?: string | null }): Promise<any> {
+    const result = await supabaseRequest<any[]>("shipments", {
+      method: "POST",
+      body: JSON.stringify({
+        id: Number(shipment.id),
+        product_id: Number(shipment.product_id),
+        sender: shipment.sender,
+        receiver: shipment.receiver,
+        status: shipment.status,
+        tx_hash: shipment.tx_hash ?? null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }),
+    });
+    return result?.[0] ?? shipment;
+  }
+
+  async updateShipment(id: number | string, updates: { status?: string; tx_hash?: string | null }): Promise<any> {
+    const result = await supabaseRequest<any[]>(`shipments?id=eq.${encodeURIComponent(String(id))}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        ...updates,
+        updated_at: new Date().toISOString(),
+      }),
+    });
+    return result?.[0];
+  }
+
+  async getCustodyTransfers(productId: string): Promise<any[]> {
+    return (await supabaseRequest<any[]>(`custody_transfers?product_id=eq.${encodeURIComponent(productId)}&order=created_at.desc`)) ?? [];
+  }
+
+  async saveCustodyTransfer(transfer: { product_id: number | string; from_address: string; to_address: string; tx_hash?: string | null }): Promise<any> {
+    const result = await supabaseRequest<any[]>("custody_transfers", {
+      method: "POST",
+      body: JSON.stringify({
+        product_id: Number(transfer.product_id),
+        from_address: transfer.from_address,
+        to_address: transfer.to_address,
+        tx_hash: transfer.tx_hash ?? null,
+        created_at: new Date().toISOString(),
+      }),
+    });
+    return result?.[0] ?? transfer;
+  }
+
+  async getEscrows(productId?: string): Promise<any[]> {
+    const query = productId ? `?product_id=eq.${encodeURIComponent(productId)}&order=created_at.desc` : "?order=created_at.desc";
+    return (await supabaseRequest<any[]>(`escrows${query}`)) ?? [];
+  }
+
+  async saveEscrow(escrow: { id: number | string; product_id: number | string; payer: string; payee: string; amount_wei: string | number; status: string; tx_hash?: string | null }): Promise<any> {
+    const result = await supabaseRequest<any[]>("escrows", {
+      method: "POST",
+      body: JSON.stringify({
+        id: Number(escrow.id),
+        product_id: Number(escrow.product_id),
+        payer: escrow.payer,
+        payee: escrow.payee,
+        amount_wei: escrow.amount_wei,
+        status: escrow.status,
+        tx_hash: escrow.tx_hash ?? null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }),
+    });
+    return result?.[0] ?? escrow;
+  }
+
+  async updateEscrow(id: number | string, updates: { status?: string; tx_hash?: string | null }): Promise<any> {
+    const result = await supabaseRequest<any[]>(`escrows?id=eq.${encodeURIComponent(String(id))}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        ...updates,
+        updated_at: new Date().toISOString(),
+      }),
+    });
+    return result?.[0];
+  }
 }

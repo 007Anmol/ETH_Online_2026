@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   ArrowUpRight,
   CircleDollarSign,
@@ -13,9 +14,47 @@ import Sidebar from "@/components/team2/Sidebar";
 import Topbar from "@/components/team2/Topbar";
 import StatusBadge from "@/components/team2/StatusBadge";
 import ShipmentCard from "@/components/team2/ShipmentCard";
-import { activity, shipments } from "@/lib/mockData";
+import { activity, shipments as mockShipments } from "@/lib/mockData";
+import { fetchShipments, fetchEscrows, type ShipmentRecord } from "@/lib/supabase";
 
 export default function Home() {
+  const [dbShipments, setDbShipments] = useState<ShipmentRecord[]>([]);
+  const [activeShipmentCount, setActiveShipmentCount] = useState<number>(24);
+  const [escrowLockedEth, setEscrowLockedEth] = useState<string>("₹18.4M");
+
+  useEffect(() => {
+    async function loadLiveStats() {
+      try {
+        const [shipmentsData, escrowsData] = await Promise.allSettled([
+          fetchShipments(),
+          fetchEscrows(),
+        ]);
+
+        if (shipmentsData.status === "fulfilled" && shipmentsData.value.length > 0) {
+          setDbShipments(shipmentsData.value);
+          const active = shipmentsData.value.filter(
+            (s) => s.status === "CREATED" || s.status === "IN_TRANSIT"
+          ).length;
+          setActiveShipmentCount(active || shipmentsData.value.length);
+        }
+
+        if (escrowsData.status === "fulfilled" && escrowsData.value.length > 0) {
+          const totalWei = escrowsData.value.reduce((acc, e) => {
+            return acc + (e.status === "ACTIVE" ? BigInt(e.amount_wei || 0) : 0n);
+          }, 0n);
+          if (totalWei > 0n) {
+            const inEth = (Number(totalWei) / 1e18).toFixed(2);
+            setEscrowLockedEth(`${inEth} ETH`);
+          }
+        }
+      } catch {
+        // Fall back to default demonstration stats
+      }
+    }
+
+    void loadLiveStats();
+  }, []);
+
   return (
     <div className="min-h-screen bg-white text-black">
       <div className="flex">
@@ -35,8 +74,7 @@ export default function Home() {
               </h1>
 
               <p className="mt-2 text-sm text-gray-500">
-                Track product movement, agent verification, escrow and
-                settlement across the network.
+                Track physical product movement, AI anomaly verification, and programmable escrow settlement.
               </p>
             </div>
 
@@ -44,7 +82,7 @@ export default function Home() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <Stat
                 label="Active Shipments"
-                value="24"
+                value={activeShipmentCount.toString().padStart(2, "0")}
                 icon={<Truck size={16} />}
               />
 
@@ -56,7 +94,7 @@ export default function Home() {
 
               <Stat
                 label="Escrow Locked"
-                value="₹18.4M"
+                value={escrowLockedEth}
                 icon={<ShieldCheck size={16} />}
               />
 
@@ -90,7 +128,7 @@ export default function Home() {
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
-                  {shipments.slice(0, 4).map((shipment) => (
+                  {mockShipments.slice(0, 4).map((shipment) => (
                     <ShipmentCard
                       key={shipment.id}
                       shipment={shipment}
@@ -99,14 +137,12 @@ export default function Home() {
                 </div>
               </section>
 
-              {/* Activity */}
+              {/* Activity feed */}
               <section className="rounded-xl border border-gray-200">
-                <div className="border-b border-gray-200 px-5 py-4">
-                  <h2 className="text-sm font-semibold">
-                    Network Activity
-                  </h2>
+                <div className="border-b border-gray-200 p-5">
+                  <h2 className="text-sm font-semibold">Recent Activity</h2>
                   <p className="mt-1 text-xs text-gray-400">
-                    Latest protocol events
+                    Network events and settlement logs
                   </p>
                 </div>
 

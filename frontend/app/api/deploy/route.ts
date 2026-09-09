@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireManufacturer } from "@/lib/auth/authorization";
 import { createWalletClient, http, createPublicClient } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { hederaTestnet } from "viem/chains";
@@ -6,6 +7,14 @@ import * as fs from "fs";
 import * as path from "path";
 
 export async function GET() {
+  const authorization = await requireManufacturer();
+  if (!authorization.ok) {
+    return NextResponse.json(
+      { success: false, error: authorization.error },
+      { status: authorization.status },
+    );
+  }
+
   try {
     const privateKey = process.env.HEDERA_OPERATOR_PRIVATE_KEY;
     if (!privateKey) throw new Error("Missing HEDERA_OPERATOR_PRIVATE_KEY");

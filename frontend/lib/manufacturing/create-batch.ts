@@ -112,6 +112,62 @@ export async function createBatch(
     return { ok: false, status: 500, error: err.message || "Failed to mint batch on-chain" };
   }
 
+  const reconciliationMetadata = {
+    batch: {
+      batch_code,
+      batch_id_hash: batchIdHash,
+      product_name,
+      product_category,
+      plant_id,
+      manufacturing_date,
+      quantity,
+      minted_count: quantity,
+      status: "MINTED" as const,
+      manufacturer_org_id: context.organizationId,
+      created_by: context.profileId,
+    },
+    products: productRows.map((product) => ({
+      ...product,
+      batch_id: null,
+      manufacturer_org_id: context.organizationId,
+      status: "TAG_PENDING" as const,
+    })),
+    createTxHash,
+    mintTxHash,
+  };
+
+  const { data: operations, error: operationError } = await supabase
+    .from("manufacturing_operations")
+    .insert([
+      {
+        operation_type: "CREATE_BATCH",
+        performed_by: context.profileId,
+        chain_tx_hash: createTxHash,
+        status: "PENDING",
+        metadata: reconciliationMetadata,
+      },
+      {
+        operation_type: "MINT_BATCH",
+        performed_by: context.profileId,
+        chain_tx_hash: mintTxHash,
+        status: "PENDING",
+        metadata: reconciliationMetadata,
+      },
+    ])
+    .select("id, operation_type");
+
+  if (operationError || !operations || operations.length !== 2) {
+    console.error("[createBatch] reconciliation ledger insert:", operationError);
+    return {
+      ok: false,
+      status: 500,
+      error: "Hedera succeeded, but the reconciliation record could not be saved.",
+    };
+  }
+
+  const createOperationId = operations.find((operation) => operation.operation_type === "CREATE_BATCH")?.id;
+  const mintOperationId = operations.find((operation) => operation.operation_type === "MINT_BATCH")?.id;
+
   // 4. [SUPABASE] Insert Batch
   const { data: batch, error: batchError } = await supabase
     .from("batches")
@@ -134,7 +190,20 @@ export async function createBatch(
 
   if (batchError || !batch) {
     console.error("[createBatch] batch insert:", batchError);
+    if (createOperationId) {
+      await supabase
+        .from("manufacturing_operations")
+        .update({ error_message: batchError?.message ?? "Batch insert failed" })
+        .eq("id", createOperationId);
+    }
     return { ok: false, status: 500, error: "Saved on chain, but failed to save batch to DB. Please refresh." };
+  }
+
+  if (createOperationId) {
+    await supabase
+      .from("manufacturing_operations")
+      .update({ batch_id: batch.id, status: "SUCCESS", error_message: null })
+      .eq("id", createOperationId);
   }
 
   // 5. [SUPABASE] Insert Products
@@ -155,11 +224,24 @@ export async function createBatch(
 
   if (productsError || !products) {
     console.error("[createBatch] products insert:", productsError);
+    if (mintOperationId) {
+      await supabase
+        .from("manufacturing_operations")
+        .update({ batch_id: batch.id, error_message: productsError?.message ?? "Product insert failed" })
+        .eq("id", mintOperationId);
+    }
     return {
       ok: false,
       status: 500,
       error: "Saved on chain, but failed to create product identities in DB. Please refresh.",
     };
+  }
+
+  if (mintOperationId) {
+    await supabase
+      .from("manufacturing_operations")
+      .update({ batch_id: batch.id, status: "SUCCESS", error_message: null })
+      .eq("id", mintOperationId);
   }
 
   return {

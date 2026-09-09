@@ -1,18 +1,17 @@
 import { json } from "@/lib/api/http";
 import { manufacturerProductsQuery } from "@/lib/manufacturing";
-import { getSession } from "@/lib/session";
+import { requireManufacturer } from "@/lib/auth/authorization";
 import { createServiceClient } from "@/lib/supabase";
 
 export async function GET(req: Request) {
-  const session = await getSession();
-  if (!session || !session.organizationId) {
-    return json({ error: "Unauthorized" }, 401);
-  }
+  const authorization = await requireManufacturer();
+  if (!authorization.ok) return json({ error: authorization.error }, authorization.status);
+  const { session } = authorization;
 
   const { searchParams } = new URL(req.url);
   const { data: products, error } = await manufacturerProductsQuery(
     createServiceClient(),
-    session.organizationId,
+    session.organizationId!,
     {
       batchId: searchParams.get("batch_id"),
       status: searchParams.get("status"),

@@ -5,7 +5,7 @@ import {
   selfieCheckLegacy,
   type IDKitResult,
 } from "@worldcoin/idkit";
-import { usePrivy } from "@privy-io/react-auth";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { motion } from "framer-motion";
@@ -27,6 +27,7 @@ type WorldIdResult = IDKitResult;
 export function LoginForm() {
   const router = useRouter();
   const { ready, authenticated, login, getAccessToken } = usePrivy();
+  const { wallets } = useWallets();
 
   const [worldOpen, setWorldOpen] = useState(false);
   const [worldContext, setWorldContext] =
@@ -75,7 +76,7 @@ export function LoginForm() {
 
     try {
       if (!authenticated) {
-        login();
+        await login();
         throw new Error("Complete wallet login, then verify World ID again.");
       }
 
@@ -85,6 +86,28 @@ export function LoginForm() {
         throw new Error("Could not obtain a Privy access token");
       }
 
+      const wallet = wallets[0];
+      if (!wallet) {
+        throw new Error("No connected Ethereum wallet was found");
+      }
+
+      const challengeResponse = await fetch("/api/auth/wallet-challenge", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ privyAccessToken }),
+      });
+      const challenge = (await challengeResponse.json()) as {
+        message?: string;
+        walletAddress?: string;
+        error?: string;
+      };
+
+      if (!challengeResponse.ok || !challenge.message || !challenge.walletAddress) {
+        throw new Error(challenge.error ?? "Could not create wallet challenge");
+      }
+
+      const signedSignature = await wallet.sign(challenge.message);
+
       const response = await fetch("/api/auth/complete", {
         method: "POST",
         headers: {
@@ -93,6 +116,9 @@ export function LoginForm() {
         body: JSON.stringify({
           privyAccessToken,
           worldIdProof: proof,
+          walletAddress: challenge.walletAddress,
+          walletMessage: challenge.message,
+          walletSignature: signedSignature,
         }),
       });
 

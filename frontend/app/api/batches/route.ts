@@ -1,21 +1,20 @@
 import { json, readJson } from "@/lib/api/http";
 import { createBatch, manufacturerBatchesQuery } from "@/lib/manufacturing";
-import { getSession } from "@/lib/session";
+import { requireManufacturer } from "@/lib/auth/authorization";
 import { createServiceClient } from "@/lib/supabase";
 import type { CreateBatchInput } from "@/lib/types";
 
 export async function POST(req: Request) {
-  const session = await getSession();
-  if (!session || !session.organizationId) {
-    return json({ error: "Unauthorized" }, 401);
-  }
+  const authorization = await requireManufacturer();
+  if (!authorization.ok) return json({ error: authorization.error }, authorization.status);
+  const { session } = authorization;
 
   const parsed = await readJson<CreateBatchInput>(req);
   if (!parsed.ok) return json({ error: "Invalid JSON body" }, 400);
   const body = parsed.body;
 
   const result = await createBatch(createServiceClient(), body, {
-    organizationId: session.organizationId,
+    organizationId: session.organizationId!,
     profileId: session.profileId,
   });
 
@@ -27,14 +26,13 @@ export async function POST(req: Request) {
 }
 
 export async function GET() {
-  const session = await getSession();
-  if (!session || !session.organizationId) {
-    return json({ error: "Unauthorized" }, 401);
-  }
+  const authorization = await requireManufacturer();
+  if (!authorization.ok) return json({ error: authorization.error }, authorization.status);
+  const { session } = authorization;
 
   const { data: batches, error } = await manufacturerBatchesQuery(
     createServiceClient(),
-    session.organizationId,
+    session.organizationId!,
   );
 
   if (error) {

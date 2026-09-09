@@ -255,6 +255,7 @@ export type Database = {
           chain_tx_hash: string | null;
           status: ManufacturingOperationStatus;
           error_message: string | null;
+          metadata: Json;
           created_at: string;
         };
         Insert: {
@@ -266,6 +267,7 @@ export type Database = {
           chain_tx_hash?: string | null;
           status?: ManufacturingOperationStatus;
           error_message?: string | null;
+          metadata?: Json;
         };
         Update: Partial<
           Database["public"]["Tables"]["manufacturing_operations"]["Insert"]

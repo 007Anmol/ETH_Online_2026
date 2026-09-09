@@ -45,7 +45,7 @@ export function aesCmac(key: Buffer, message: Buffer): Buffer {
   const n = message.length === 0 ? 1 : Math.ceil(message.length / BLOCK);
   const complete = message.length > 0 && message.length % BLOCK === 0;
   const lastIndex = n - 1;
-  let x = Buffer.alloc(BLOCK, 0);
+  let x: Buffer<ArrayBufferLike> = Buffer.alloc(BLOCK, 0);
 
   for (let i = 0; i < lastIndex; i += 1) {
     const block = message.subarray(i * BLOCK, (i + 1) * BLOCK);

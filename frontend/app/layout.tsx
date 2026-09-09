@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Manrope } from "next/font/google";
+
 import { AppShell } from "@/components/app-shell";
+import { Providers } from "@/app/providers";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { getSession } from "@/lib/session";
 import { Toaster } from "sonner";
+
 import "./globals.css";
 
 const geistSans = Geist({
@@ -38,7 +41,10 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="flex min-h-full flex-col">
         <ThemeProvider>
-          <AppShell session={session}>{children}</AppShell>
+          <Providers>
+            <AppShell session={session}>{children}</AppShell>
+          </Providers>
+
           <Toaster richColors position="top-right" />
         </ThemeProvider>
       </body>

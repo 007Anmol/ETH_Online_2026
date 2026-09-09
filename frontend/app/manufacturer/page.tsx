@@ -7,8 +7,10 @@ export const metadata = { title: "Dashboard — VeriChain Manufacturer" };
 
 export default async function ManufacturerDashboard() {
   const session = await getSession();
-  if (!session) redirect("/login");
 
+  if (!session) {
+    redirect("/login");
+  }
   const counts = session.organizationId
     ? await getDashboardCounts(session.organizationId)
     : { batches: 0, products: 0, bound: 0 };

@@ -13,13 +13,13 @@ set name = excluded.name,
     type = excluded.type,
     world_id_verified = excluded.world_id_verified;
 
-insert into profiles (
-  wallet_address,
-  organization_id,
-  role,
-  world_id_verified,
-  display_name
-)
+  insert into profiles (
+    wallet_address,
+    organization_id,
+    role,
+    world_id_verified,
+    display_name
+  )
 select
   '0x1111111111111111111111111111111111111111',
   organizations.id,

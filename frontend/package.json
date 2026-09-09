@@ -20,11 +20,16 @@
     "test": "npm run test:shared && npm run test:schema && npm run test:batches && npm run test:nfc"
   },
   "dependencies": {
+    "@privy-io/node": "^0.34.0",
+    "@privy-io/react-auth": "^3.40.0",
     "@react-three/drei": "^10.7.8",
     "@react-three/fiber": "^9.7.0",
+    "@stripe/stripe-js": "^9.15.0",
     "@supabase/supabase-js": "^2.78.0",
     "@verichain/hedera": "file:../services/hedera",
     "@verichain/shared": "file:../packages/shared",
+    "@worldcoin/idkit": "^4.2.3",
+    "@worldcoin/idkit-core": "^4.2.4",
     "clsx": "^2.1.1",
     "framer-motion": "^13.2.0",
     "lucide-react": "^1.41.0",

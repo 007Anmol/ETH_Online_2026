@@ -4,7 +4,6 @@ pragma solidity ^0.8.24;
 import "forge-std/Script.sol";
 import "../src/VeriChainRegistry.sol";
 import "../src/VeriChainEscrow.sol";
-import "../src/VeriChainHook.sol";
 
 contract Deploy is Script {
     function run() external {
@@ -16,15 +15,9 @@ contract Deploy is Script {
             address(registry)
         );
 
-        VeriChainHook hook = new VeriChainHook(
-            address(registry),
-            address(escrow)
-        );
-
         vm.stopBroadcast();
 
         console2.log("Registry:", address(registry));
         console2.log("Escrow:", address(escrow));
-        console2.log("Hook:", address(hook));
     }
 }

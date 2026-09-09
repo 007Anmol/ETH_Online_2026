@@ -152,3 +152,22 @@ export async function saveEscrowRecord(
   const data = await res.json();
   return data.escrow;
 }
+
+export async function fetchCheckpoints(productId: string): Promise<CheckpointRecord[]> {
+  const res = await fetch(`/api/checkpoints/records?productId=${encodeURIComponent(productId)}`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to fetch checkpoints");
+  return (await res.json()).checkpoints ?? [];
+}
+
+export async function fetchAnomalies(productId?: string): Promise<AnomalyRecord[]> {
+  const query = productId ? `?productId=${encodeURIComponent(productId)}` : "";
+  const res = await fetch(`/api/anomalies${query}`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to fetch anomalies");
+  return (await res.json()).anomalies ?? [];
+}
+
+export async function fetchCustodyTransfers(productId: string): Promise<CustodyRecord[]> {
+  const res = await fetch(`/api/custody?productId=${encodeURIComponent(productId)}`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to fetch custody transfers");
+  return (await res.json()).transfers ?? [];
+}

@@ -2,6 +2,21 @@ alter table checkpoints add column if not exists request_id text;
 alter table anomalies add column if not exists request_id text;
 alter table anomalies add column if not exists explanation text;
 alter table anomalies add column if not exists resolved_at timestamptz;
+alter table shipments add column if not exists updated_at timestamptz not null default now();
+alter table escrows add column if not exists updated_at timestamptz not null default now();
+
+alter table checkpoints drop constraint if exists checkpoints_risk_score_check;
+alter table checkpoints add constraint checkpoints_risk_score_check
+  check (risk_score is null or risk_score between 0 and 100);
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'anomalies_status_check'
+  ) then
+    alter table anomalies add constraint anomalies_status_check
+      check (status in ('OPEN', 'RESOLVED', 'DISMISSED'));
+  end if;
+end $$;
 
 create unique index if not exists checkpoints_request_id_idx
   on checkpoints(request_id) where request_id is not null;

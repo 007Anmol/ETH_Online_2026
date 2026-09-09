@@ -1,0 +1,13 @@
+{
+  "name": "@verichain/hedera",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@verichain/shared": "file:../../packages/shared",
+    "viem": "^2.56.3"
+  }
+}

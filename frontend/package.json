@@ -1,0 +1,59 @@
+{
+  "name": "frontend",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "seed": "tsx scripts/seed.ts",
+    "registry:read": "tsx scripts/read-registry.ts",
+    "registry:create-batch": "tsx scripts/create-batch-onchain.ts",
+    "supabase:check": "tsx scripts/check-supabase.ts",
+    "test:shared": "tsx scripts/test-shared.ts",
+    "test:schema": "tsx scripts/test-schema.ts",
+    "test:batches": "tsx scripts/test-batches.ts",
+    "test:auth-security": "tsx scripts/test-auth-security.ts",
+    "test:auth-flow": "tsx scripts/test-real-authenticated-flow.ts",
+    "test:nfc": "tsx scripts/test-bind.ts && tsx scripts/test-verify.ts && tsx scripts/test-simulate.ts && tsx scripts/test-nfc-flow.ts && tsx scripts/test-http.ts && tsx scripts/test-edges.ts",
+    "test": "npm run test:shared && npm run test:schema && npm run test:batches && npm run test:nfc"
+  },
+  "dependencies": {
+    "@privy-io/node": "^0.34.0",
+    "@privy-io/react-auth": "^3.40.0",
+    "@react-three/drei": "^10.7.8",
+    "@react-three/fiber": "^9.7.0",
+    "@stripe/stripe-js": "^9.15.0",
+    "@supabase/supabase-js": "^2.78.0",
+    "@verichain/hedera": "file:../services/hedera",
+    "@verichain/shared": "file:../packages/shared",
+    "@worldcoin/idkit": "^4.2.3",
+    "@worldcoin/idkit-core": "^4.2.4",
+    "clsx": "^2.1.1",
+    "framer-motion": "^13.2.0",
+    "lucide-react": "^1.41.0",
+    "next": "16.3.4",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "server-only": "^0.0.1",
+    "simplex-noise": "^4.0.3",
+    "sonner": "^2.0.8",
+    "tailwind-merge": "^3.6.0",
+    "three": "^0.185.1",
+    "viem": "^2.56.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/three": "^0.185.4",
+    "babel-plugin-react-compiler": "1.0.0",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.13",
+    "typescript": "^5"
+  }
+}

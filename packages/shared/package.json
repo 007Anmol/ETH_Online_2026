@@ -1,0 +1,10 @@
+{
+  "name": "@verichain/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.ts",
+    "./abi/VeriChainRegistry.json": "./abi/VeriChainRegistry.json"
+  }
+}

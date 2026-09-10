@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ScanLine } from "lucide-react";
+import { LogOut, ScanLine } from "lucide-react";
 import { Container } from "@/components/ui/Container";
 import { Logo } from "@/components/ui/Logo";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { useConsumerIdentity } from "@/lib/consumer/hooks/use-consumer-identity";
 
 const NAV_LINKS = [
   { href: "/consumer", label: "Home" },
@@ -20,6 +21,7 @@ function isActive(pathname: string, href: string) {
 
 export function ConsumerHeader() {
   const pathname = usePathname();
+  const { identity, status, logout } = useConsumerIdentity();
 
   return (
     <header className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--background)]/85 backdrop-blur-xl">
@@ -49,6 +51,28 @@ export function ConsumerHeader() {
 
           <div className="flex items-center gap-3">
             <ThemeToggle />
+
+            {status !== "checking" ? (
+              identity ? (
+                <button
+                  type="button"
+                  onClick={logout}
+                  aria-label={`Sign out of ${identity.displayName}`}
+                  className="hidden items-center gap-1.5 rounded-full border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--muted)] transition-colors hover:border-[var(--foreground)] hover:text-[var(--foreground)] sm:flex"
+                >
+                  {identity.displayName}
+                  <LogOut size={13} strokeWidth={1.75} />
+                </button>
+              ) : (
+                <Link
+                  href="/consumer/login"
+                  className="hidden items-center rounded-full border border-[var(--border)] px-4 py-2 text-xs font-medium text-[var(--foreground)] transition-colors hover:border-[var(--foreground)] sm:flex"
+                >
+                  Sign in
+                </Link>
+              )
+            ) : null}
+
             <Link
               href="/consumer/scan"
               className="hidden items-center gap-2 rounded-full bg-[var(--foreground)] px-4 py-2 text-xs font-medium text-[var(--background)] transition-opacity hover:opacity-85 sm:flex"

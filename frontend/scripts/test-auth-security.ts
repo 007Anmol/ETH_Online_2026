@@ -1,8 +1,31 @@
+import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
+import {
+  CHALLENGE_COOKIE,
+  createWalletChallenge,
+} from "../lib/auth/wallet-challenge-token";
 import { TEST_BASE, createReporter, requireApp } from "./test-helpers";
+import { loadEnvFiles } from "./load-env";
 
 const { check, finish } = createReporter("Authentication security");
 
+const DUMMY_PROOF = { proof: "unused" };
+
+async function postComplete(
+  body: Record<string, unknown>,
+  cookieValue?: string,
+) {
+  return fetch(`${TEST_BASE}/api/auth/complete`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...(cookieValue ? { cookie: `${CHALLENGE_COOKIE}=${cookieValue}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+}
+
 async function main() {
+  loadEnvFiles();
   await requireApp();
 
   const mockLogin = await fetch(`${TEST_BASE}/api/auth/mock-login`, { method: "POST" });
@@ -34,33 +57,109 @@ async function main() {
   const unauthenticatedDeploy = await fetch(`${TEST_BASE}/api/deploy`);
   check("unauthenticated deployment is rejected", unauthenticatedDeploy.status === 401);
 
-  const completeWithoutSignature = await fetch(`${TEST_BASE}/api/auth/complete`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      privyAccessToken: "token",
-      worldIdProof: { proof: "unused" },
-      walletAddress: "0x1111111111111111111111111111111111111111",
-    }),
+  const account = privateKeyToAccount(generatePrivateKey());
+  const other = privateKeyToAccount(generatePrivateKey());
+
+  const completeWithoutSignature = await postComplete({
+    privyAccessToken: "token",
+    worldIdProof: DUMMY_PROOF,
+    walletAddress: account.address,
   });
   check(
     "complete auth without a wallet signature is rejected",
     completeWithoutSignature.status === 400,
   );
 
-  const completeWithoutChallenge = await fetch(`${TEST_BASE}/api/auth/complete`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      privyAccessToken: "token",
-      worldIdProof: { proof: "unused" },
-      walletAddress: "0x1111111111111111111111111111111111111111",
-      walletSignature: `0x${"ab".repeat(65)}`,
-    }),
+  const completeWithoutChallenge = await postComplete({
+    privyAccessToken: "token",
+    worldIdProof: DUMMY_PROOF,
+    walletAddress: account.address,
+    walletSignature: `0x${"ab".repeat(65)}`,
   });
   check(
     "complete auth without a one-time challenge is rejected",
     completeWithoutChallenge.status === 401,
+  );
+
+  const expired = createWalletChallenge(account.address, {
+    expiresAt: Math.floor(Date.now() / 1000) - 60,
+  });
+  const expiredChallenge = await postComplete(
+    {
+      privyAccessToken: "token",
+      worldIdProof: DUMMY_PROOF,
+      walletAddress: account.address,
+      walletSignature: await account.signMessage({ message: expired.challenge.message }),
+    },
+    expired.cookieValue,
+  );
+  check("expired wallet challenge is rejected", expiredChallenge.status === 401);
+
+  const tampered = createWalletChallenge(account.address);
+  const tamperedChallenge = await postComplete(
+    {
+      privyAccessToken: "token",
+      worldIdProof: DUMMY_PROOF,
+      walletAddress: account.address,
+      walletSignature: await account.signMessage({ message: tampered.challenge.message }),
+    },
+    `${tampered.cookieValue}tampered`,
+  );
+  check("tampered wallet challenge is rejected", tamperedChallenge.status === 401);
+
+  const mismatch = createWalletChallenge(account.address);
+  const walletMismatch = await postComplete(
+    {
+      privyAccessToken: "token",
+      worldIdProof: DUMMY_PROOF,
+      walletAddress: other.address,
+      walletSignature: await other.signMessage({ message: mismatch.challenge.message }),
+    },
+    mismatch.cookieValue,
+  );
+  const walletMismatchBody = (await walletMismatch.json()) as { error?: string };
+  check(
+    "challenge wallet mismatch is rejected",
+    walletMismatch.status === 401 &&
+      walletMismatchBody.error === "Wallet does not match the signed challenge",
+  );
+
+  const wrong = createWalletChallenge(account.address);
+  const wrongSignature = await postComplete(
+    {
+      privyAccessToken: "token",
+      worldIdProof: DUMMY_PROOF,
+      walletAddress: account.address,
+      walletSignature: await other.signMessage({ message: wrong.challenge.message }),
+    },
+    wrong.cookieValue,
+  );
+  const wrongSignatureBody = (await wrongSignature.json()) as { error?: string };
+  check(
+    "wrong wallet signature is rejected",
+    wrongSignature.status === 401 &&
+      wrongSignatureBody.error === "Wallet signature is invalid",
+  );
+
+  const replay = createWalletChallenge(account.address);
+  const replaySignature = await account.signMessage({ message: replay.challenge.message });
+  const replayBody = {
+    privyAccessToken: "token",
+    worldIdProof: DUMMY_PROOF,
+    walletAddress: account.address,
+    walletSignature: replaySignature,
+  };
+  const firstUse = await postComplete(replayBody, replay.cookieValue);
+  const secondUse = await postComplete(replayBody, replay.cookieValue);
+  const secondUseBody = (await secondUse.json()) as { error?: string };
+  check(
+    "first signed complete attempt consumes the challenge",
+    firstUse.status === 401,
+  );
+  check(
+    "replayed signature after consume is rejected",
+    secondUse.status === 401 &&
+      secondUseBody.error === "Wallet challenge is missing, expired, or already used",
   );
 
   finish();

@@ -2,10 +2,6 @@ import "server-only";
 
 import { isAddress, isHex, verifyMessage } from "viem";
 
-export function normalizeWalletAddress(value: string): string {
-  return value.trim().toLowerCase();
-}
-
 export async function verifyWalletSignature(input: {
   address: string;
   message: string;

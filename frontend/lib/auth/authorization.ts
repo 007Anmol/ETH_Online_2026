@@ -1,5 +1,6 @@
 import "server-only";
 
+import { evaluateManufacturerAccess } from "@/lib/auth/complete-login";
 import { getSession, type Session } from "@/lib/session";
 import { createServiceClient } from "@/lib/supabase";
 import type { Database } from "@/lib/database.types";
@@ -29,12 +30,9 @@ export async function requireManufacturer(): Promise<ManufacturerAuthorization> 
     return { ok: false, status: 401, error: "Authenticated profile is invalid" };
   }
 
-  if (profile.role !== "MANUFACTURER" || !profile.world_id_verified) {
-    return {
-      ok: false,
-      status: 403,
-      error: "Verified manufacturer authorization required",
-    };
+  const access = evaluateManufacturerAccess(profile);
+  if (!access.ok) {
+    return access;
   }
 
   return { ok: true, session, profile };

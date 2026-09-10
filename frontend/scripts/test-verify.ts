@@ -44,7 +44,7 @@ async function main() {
 
   const { data: product } = await supabase
     .from("products")
-    .select("id")
+    .select("id, manufacturer_org_id")
     .eq("product_code", DEMO_PRODUCT_CODE)
     .single();
   if (!product) throw new Error("Dummy product missing");
@@ -60,6 +60,7 @@ async function main() {
     const bound = await bindTag(supabase, {
       product_id: product.id,
       tag_uid: DEMO_TAG_UID,
+      manufacturerOrgId: product.manufacturer_org_id,
     });
     if (!bound.ok) throw new Error(bound.error);
   }

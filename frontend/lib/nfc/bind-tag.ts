@@ -14,6 +14,7 @@ import { bindTagOnChain } from "@verichain/hedera";
 type BindInput = {
   product_id: string;
   tag_uid: string;
+  manufacturerOrgId: string;
   performed_by?: string | null;
 };
 
@@ -47,6 +48,7 @@ export async function bindTag(
 ): Promise<BindTagResult> {
   const productKey = input.product_id.trim();
   const tagUid = normalizeTagUid(input.tag_uid);
+  const manufacturerOrgId = input.manufacturerOrgId?.trim() ?? "";
 
   if (!productKey) {
     return { ok: false, status: 400, error: "product_id is required" };
@@ -61,17 +63,24 @@ export async function bindTag(
       error: "tag_uid must be 8–20 hex characters",
     };
   }
+  if (!manufacturerOrgId) {
+    return {
+      ok: false,
+      status: 403,
+      error: "Manufacturer organization is required",
+    };
+  }
 
   const { data: product, error: productError } = await supabase
     .from("products")
-    .select("id, product_code, status, batch_id")
+    .select("id, product_code, status, batch_id, manufacturer_org_id")
     .eq(looksLikeUuid(productKey) ? "id" : "product_code", productKey)
     .maybeSingle();
 
   if (productError) {
     return { ok: false, status: 500, error: productError.message };
   }
-  if (!product) {
+  if (!product || product.manufacturer_org_id !== manufacturerOrgId) {
     return { ok: false, status: 404, error: "Product not found" };
   }
 

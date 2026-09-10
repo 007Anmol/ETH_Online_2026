@@ -46,6 +46,7 @@ async function main() {
   const bindRes = await bindTag(supabase, {
     product_id: product.id,
     tag_uid: tagUid,
+    manufacturerOrgId: org.id,
   });
 
   if (!bindRes.ok) throw new Error(`Bind failed: ${bindRes.error}`);
@@ -87,6 +88,7 @@ async function main() {
   const revokeRes = await revokeTag(supabase, {
     tag_id: bindRes.tag_id,
     reason: "Stolen",
+    manufacturerOrgId: org.id,
   });
   if (!revokeRes.ok) throw new Error(`Revoke failed: ${revokeRes.error}`);
   console.log(`   Revoked successfully!`);

@@ -34,6 +34,7 @@ export function serviceClient(): SupabaseClient<Database> {
   }
   return createClient<Database>(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
+    realtime: { transport: globalThis.WebSocket },
   });
 }
 

@@ -17,6 +17,7 @@ export async function POST(request: Request) {
   const result = await bindTag(createServiceClient(), {
     product_id: body.product_id ?? "",
     tag_uid: body.tag_uid ?? "",
+    manufacturerOrgId: session.organizationId!,
     performed_by: nfcActorId(session),
   });
 

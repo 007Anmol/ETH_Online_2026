@@ -21,6 +21,7 @@ export async function POST(request: Request) {
   const result = await revokeTag(createServiceClient(), {
     tag_id: body.tag_id ?? "",
     reason: body.reason ?? "Revoked by manufacturer",
+    manufacturerOrgId: session.organizationId!,
     performed_by: nfcActorId(session),
   });
 

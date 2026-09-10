@@ -31,7 +31,7 @@ async function main() {
 
   const { data: product } = await supabase
     .from("products")
-    .select("id, product_code, status")
+    .select("id, product_code, status, manufacturer_org_id")
     .eq("product_code", DEMO_PRODUCT_CODE)
     .single();
 
@@ -59,6 +59,7 @@ async function main() {
     const again = await bindTag(supabase, {
       product_id: product.id,
       tag_uid: "04BBBBBBBB99",
+      manufacturerOrgId: product.manufacturer_org_id,
     });
     check(
       "second bind is rejected",
@@ -116,7 +117,7 @@ async function main() {
   const { data: sharedProducts } = sharedBatch
     ? await supabase
         .from("products")
-        .select("id, product_code, status")
+        .select("id, product_code, status, manufacturer_org_id")
         .eq("batch_id", sharedBatch.id)
         .order("product_code")
     : { data: [] };
@@ -180,6 +181,7 @@ async function main() {
     const extraBind = await bindTag(supabase, {
       product_id: sharedBound[0].id,
       tag_uid: "04EEEEEEEE01",
+      manufacturerOrgId: sharedBound[0].manufacturer_org_id,
     });
     check(
       "do not bind a second tag on the shared product",

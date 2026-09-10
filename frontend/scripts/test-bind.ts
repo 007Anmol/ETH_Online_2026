@@ -1,8 +1,8 @@
-import { createClient } from "@supabase/supabase-js";
+import "./load-env";
 import { DEMO_PRODUCT_CODE, DEMO_TAG_UID } from "../lib/constants";
-import type { Database } from "../lib/database.types";
 import { bindTag, type BindTagResult } from "../lib/nfc/bind-tag";
-import { loadEnvFiles } from "./load-env";
+import { revokeTag } from "../lib/nfc/revoke-tag";
+import { serviceClient } from "./test-helpers";
 
 function expect(name: string, ok: boolean, detail?: string) {
   console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? ` — ${detail}` : ""}`);
@@ -10,11 +10,7 @@ function expect(name: string, ok: boolean, detail?: string) {
 }
 
 async function main() {
-  loadEnvFiles();
-  const supabase = createClient<Database>(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  );
+  const supabase = serviceClient();
 
   let failed = 0;
   const fail = (name: string, detail?: string) => {
@@ -25,7 +21,7 @@ async function main() {
 
   const { data: dummy } = await supabase
     .from("products")
-    .select("id, product_code, status")
+    .select("id, product_code, status, manufacturer_org_id")
     .eq("product_code", DEMO_PRODUCT_CODE)
     .single();
 
@@ -70,38 +66,47 @@ async function main() {
     ? pass("dummy has one TAG_BOUND event")
     : fail("dummy has one TAG_BOUND event", `count=${eventCount}`);
 
+  const orgId = dummy.manufacturer_org_id;
+  const foreignOrgId = "00000000-0000-4000-8000-000000000001";
+
   const cases: { name: string; input: Parameters<typeof bindTag>[1]; check: (r: BindTagResult) => boolean }[] =
     [
       {
         name: "reject empty product_id",
-        input: { product_id: "", tag_uid: DEMO_TAG_UID },
+        input: { product_id: "", tag_uid: DEMO_TAG_UID, manufacturerOrgId: orgId },
         check: (r) => !r.ok && r.status === 400,
       },
       {
         name: "reject empty tag_uid",
-        input: { product_id: dummy.id, tag_uid: "" },
+        input: { product_id: dummy.id, tag_uid: "", manufacturerOrgId: orgId },
         check: (r) => !r.ok && r.status === 400,
       },
       {
         name: "reject invalid tag_uid",
-        input: { product_id: dummy.id, tag_uid: "not-a-tag" },
+        input: { product_id: dummy.id, tag_uid: "not-a-tag", manufacturerOrgId: orgId },
         check: (r) => !r.ok && r.status === 400,
       },
       {
         name: "reject tag_uid shorter than 8 hex",
-        input: { product_id: dummy.id, tag_uid: "04AABB" },
+        input: { product_id: dummy.id, tag_uid: "04AABB", manufacturerOrgId: orgId },
         check: (r) => !r.ok && r.status === 400,
       },
       {
         name: "reject tag_uid longer than 20 hex",
-        input: { product_id: dummy.id, tag_uid: "04AABBCCDDEEFF00112233" },
+        input: { product_id: dummy.id, tag_uid: "04AABBCCDDEEFF00112233", manufacturerOrgId: orgId },
         check: (r) => !r.ok && r.status === 400,
+      },
+      {
+        name: "reject bind without manufacturer org",
+        input: { product_id: dummy.id, tag_uid: "04AAAAAAAA01", manufacturerOrgId: "" },
+        check: (r) => !r.ok && r.status === 403,
       },
       {
         name: "reject unknown product",
         input: {
           product_id: "00000000-0000-0000-0000-000000000000",
           tag_uid: "04AAAAAAAA01",
+          manufacturerOrgId: orgId,
         },
         check: (r) => !r.ok && r.status === 404,
       },
@@ -110,29 +115,35 @@ async function main() {
         input: {
           product_id: "VC-DOES-NOT-EXIST",
           tag_uid: "04AAAAAAAA01",
+          manufacturerOrgId: orgId,
         },
         check: (r) => !r.ok && r.status === 404,
       },
       {
+        name: "reject bind for another manufacturer's product",
+        input: { product_id: dummy.id, tag_uid: "04CCCCCCCC01", manufacturerOrgId: foreignOrgId },
+        check: (r) => !r.ok && r.status === 404,
+      },
+      {
         name: "product_code of dummy is already bound",
-        input: { product_id: DEMO_PRODUCT_CODE, tag_uid: "04BBBBBBBB02" },
+        input: { product_id: DEMO_PRODUCT_CODE, tag_uid: "04BBBBBBBB02", manufacturerOrgId: orgId },
         check: (r) => !r.ok && r.status === 409,
       },
       {
         name: "reject second tag on dummy product",
-        input: { product_id: dummy.id, tag_uid: "04BBBBBBBB01" },
+        input: { product_id: dummy.id, tag_uid: "04BBBBBBBB01", manufacturerOrgId: orgId },
         check: (r) => !r.ok && r.status === 409 && r.error.includes("already has a bound tag"),
       },
       {
         name: "treat 04:de:ad:be:ef:01 as the same dummy tag",
-        input: { product_id: dummy.id, tag_uid: "04:de:ad:be:ef:01" },
+        input: { product_id: dummy.id, tag_uid: "04:de:ad:be:ef:01", manufacturerOrgId: orgId },
         check: (r) => !r.ok && r.status === 409,
       },
     ];
 
   const { data: other } = await supabase
     .from("products")
-    .select("id, product_code")
+    .select("id, product_code, manufacturer_org_id")
     .eq("status", "TAG_PENDING")
     .limit(1)
     .maybeSingle();
@@ -140,13 +151,21 @@ async function main() {
   if (other) {
     cases.push({
       name: "reject dummy tag on a different product",
-      input: { product_id: other.id, tag_uid: DEMO_TAG_UID },
+      input: {
+        product_id: other.id,
+        tag_uid: DEMO_TAG_UID,
+        manufacturerOrgId: other.manufacturer_org_id,
+      },
       check: (r) =>
         !r.ok && r.status === 409 && r.error.includes("already bound"),
     });
     cases.push({
       name: "reject dummy tag with 0x prefix on a different product",
-      input: { product_id: other.id, tag_uid: `0x${DEMO_TAG_UID}` },
+      input: {
+        product_id: other.id,
+        tag_uid: `0x${DEMO_TAG_UID}`,
+        manufacturerOrgId: other.manufacturer_org_id,
+      },
       check: (r) => !r.ok && r.status === 409,
     });
   } else {
@@ -158,6 +177,19 @@ async function main() {
     testCase.check(result)
       ? pass(testCase.name)
       : fail(testCase.name, JSON.stringify(result));
+  }
+
+  if (boundTags[0]) {
+    const revokeForeign = await revokeTag(supabase, {
+      tag_id: boundTags[0].id,
+      reason: "org-scope test",
+      manufacturerOrgId: foreignOrgId,
+    });
+    !revokeForeign.ok && revokeForeign.status === 404
+      ? pass("reject revoke for another manufacturer's tag")
+      : fail("reject revoke for another manufacturer's tag", JSON.stringify(revokeForeign));
+  } else {
+    fail("reject revoke for another manufacturer's tag", "no bound dummy tag");
   }
 
   const { data: manufacturerPending } = await supabase

@@ -6,6 +6,7 @@ import { revokeTagOnChain } from "@verichain/hedera";
 type RevokeInput = {
   tag_id: string;
   reason: string;
+  manufacturerOrgId: string;
   performed_by?: string | null;
 };
 
@@ -18,9 +19,17 @@ export async function revokeTag(
   input: RevokeInput,
 ): Promise<RevokeTagResult> {
   const { tag_id, reason } = input;
+  const manufacturerOrgId = input.manufacturerOrgId?.trim() ?? "";
 
   if (!tag_id) {
     return { ok: false, status: 400, error: "tag_id is required" };
+  }
+  if (!manufacturerOrgId) {
+    return {
+      ok: false,
+      status: 403,
+      error: "Manufacturer organization is required",
+    };
   }
 
   // 1. Fetch tag and ensure it's BOUND
@@ -34,6 +43,22 @@ export async function revokeTag(
     return { ok: false, status: 500, error: tagError.message };
   }
   if (!tag) {
+    return { ok: false, status: 404, error: "Tag not found" };
+  }
+  if (!tag.product_id) {
+    return { ok: false, status: 404, error: "Tag not found" };
+  }
+
+  const { data: boundProduct, error: boundProductError } = await supabase
+    .from("products")
+    .select("id, manufacturer_org_id")
+    .eq("id", tag.product_id)
+    .maybeSingle();
+
+  if (boundProductError) {
+    return { ok: false, status: 500, error: boundProductError.message };
+  }
+  if (!boundProduct || boundProduct.manufacturer_org_id !== manufacturerOrgId) {
     return { ok: false, status: 404, error: "Tag not found" };
   }
   if (tag.status === "REVOKED") {

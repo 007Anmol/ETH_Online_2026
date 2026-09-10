@@ -1,13 +1,10 @@
 import { ScanLine } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { RevealGroup } from "@/components/consumer/RevealGroup";
-import { PageOrbAccent } from "@/components/consumer/three/PageOrbAccent";
 
 export function HeroSection() {
   return (
     <section className="relative overflow-hidden border-b border-[var(--border)] py-20 lg:py-28">
-      <PageOrbAccent className="left-1/2 top-1/2 h-[32rem] w-[32rem] -translate-x-1/2 -translate-y-1/2" />
-
       <RevealGroup className="relative mx-auto w-full max-w-7xl px-6 text-center lg:px-10">
         <p data-reveal className="text-[11px] uppercase tracking-[0.2em] text-[var(--muted)]">
           For the products you buy

@@ -9,7 +9,6 @@ import { TrustSummaryList } from "@/components/consumer/product/TrustSummaryList
 import { ManufacturerCard } from "@/components/consumer/product/ManufacturerCard";
 import { ProductIdentityHeading } from "@/components/consumer/product/ProductIdentityHeading";
 import { ProductNotFound } from "@/components/consumer/product/ProductNotFound";
-import { PageOrbAccent } from "@/components/consumer/three/PageOrbAccent";
 import { ownershipProvider, productDataProvider } from "@/lib/consumer/providers";
 
 export async function generateMetadata({
@@ -39,9 +38,7 @@ export default async function ConsumerProductPage({
       : null;
 
   return (
-    <div className="relative mx-auto w-full max-w-5xl px-6 py-10 lg:px-10">
-      <PageOrbAccent className="right-0 top-0 h-72 w-72" />
-
+    <div className="mx-auto w-full max-w-5xl px-6 py-10 lg:px-10">
       <Link
         href="/consumer/scan"
         className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--muted)] transition-colors hover:text-[var(--foreground)]"

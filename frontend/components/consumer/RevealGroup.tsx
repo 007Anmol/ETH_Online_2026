@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useRef, type ReactNode } from "react";
-import gsap from "gsap";
+import { animate, stagger } from "framer-motion";
 
 /**
  * Wraps a block of heading/copy and staggers a fade-up entrance for every
- * direct-or-nested element marked `data-reveal`, via GSAP. Falls back to an
- * instant, fully-visible state under `prefers-reduced-motion`.
+ * direct-or-nested element marked `data-reveal`. Uses Framer Motion's
+ * standalone `animate`/`stagger` DOM utilities — the same engine already
+ * used everywhere else in this app — rather than a second animation
+ * library. Falls back to an instant, fully-visible state under
+ * `prefers-reduced-motion`.
  */
 export function RevealGroup({
   children,
@@ -25,18 +28,18 @@ export function RevealGroup({
     const targets = root.querySelectorAll("[data-reveal]");
 
     if (reduceMotion) {
-      gsap.set(targets, { opacity: 1, y: 0 });
+      animate(targets, { opacity: 1, y: 0 }, { duration: 0 });
       return;
     }
 
-    const tween = gsap.fromTo(
+    const controls = animate(
       targets,
-      { opacity: 0, y: 14 },
-      { opacity: 1, y: 0, duration: 0.5, ease: "power2.out", stagger: 0.08 },
+      { opacity: [0, 1], y: [14, 0] },
+      { duration: 0.5, ease: "easeOut", delay: stagger(0.08) },
     );
 
     return () => {
-      tween.kill();
+      controls.stop();
     };
   }, []);
 

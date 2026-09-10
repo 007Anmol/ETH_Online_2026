@@ -3,7 +3,6 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { ClaimPanel } from "@/components/consumer/claim/ClaimPanel";
 import { EmptyState } from "@/components/consumer/states/EmptyState";
-import { PageOrbAccent } from "@/components/consumer/three/PageOrbAccent";
 import { productDataProvider } from "@/lib/consumer/providers";
 import { SearchX } from "lucide-react";
 
@@ -29,9 +28,7 @@ export default async function ConsumerProductClaimPage({
   ]);
 
   return (
-    <div className="relative mx-auto w-full max-w-3xl px-6 py-10 lg:px-10">
-      <PageOrbAccent className="left-1/2 top-0 h-72 w-72 -translate-x-1/2" />
-
+    <div className="mx-auto w-full max-w-3xl px-6 py-10 lg:px-10">
       <Link
         href={`/consumer/product/${encodeURIComponent(productId)}`}
         className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--muted)] transition-colors hover:text-[var(--foreground)]"

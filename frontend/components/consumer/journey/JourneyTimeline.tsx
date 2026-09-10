@@ -1,15 +1,10 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { animate, inView } from "framer-motion";
 import { JourneyEventCard } from "@/components/consumer/journey/JourneyEventCard";
 import { computeJourneyDotStates } from "@/lib/consumer/journey-progress";
 import type { ProductJourneyEvent } from "@/lib/consumer/types";
-
-if (typeof window !== "undefined") {
-  gsap.registerPlugin(ScrollTrigger);
-}
 
 export function JourneyTimeline({ events }: { events: ProductJourneyEvent[] }) {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -19,33 +14,28 @@ export function JourneyTimeline({ events }: { events: ProductJourneyEvent[] }) {
     if (!root) return;
 
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const items = root.querySelectorAll("[data-journey-item]");
+    const items = Array.from(root.querySelectorAll<HTMLElement>("[data-journey-item]"));
 
     if (reduceMotion) {
-      gsap.set(items, { opacity: 1, y: 0 });
+      animate(items, { opacity: 1, y: 0 }, { duration: 0 });
       return;
     }
 
-    const triggers = Array.from(items).map((item) =>
-      gsap.fromTo(
+    const stops = items.map((item) => {
+      let stop = () => {};
+      stop = inView(
         item,
-        { opacity: 0, y: 24 },
-        {
-          opacity: 1,
-          y: 0,
-          duration: 0.5,
-          ease: "power2.out",
-          scrollTrigger: {
-            trigger: item,
-            start: "top 88%",
-            toggleActions: "play none none none",
-          },
+        () => {
+          animate(item, { opacity: [0, 1], y: [24, 0] }, { duration: 0.5, ease: "easeOut" });
+          stop();
         },
-      ),
-    );
+        { margin: "0px 0px -12% 0px" },
+      );
+      return stop;
+    });
 
     return () => {
-      triggers.forEach((tween) => tween.scrollTrigger?.kill());
+      stops.forEach((stop) => stop());
     };
   }, [events]);
 

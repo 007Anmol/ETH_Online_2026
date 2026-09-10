@@ -24,9 +24,25 @@ type WorldContextResponse = {
 
 type WorldIdResult = IDKitResult;
 
+async function withTimeout<T>(promise: Promise<T>, message: string): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(message)), 30_000);
+  });
+
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
+}
+
 export function LoginForm() {
   const router = useRouter();
-  const { ready, authenticated, login, getAccessToken } = usePrivy();
+  const { ready, authenticated, login, logout, getAccessToken } = usePrivy();
   const { wallets } = useWallets();
 
   const [worldOpen, setWorldOpen] = useState(false);
@@ -41,6 +57,16 @@ export function LoginForm() {
     setPending(true);
 
     try {
+      const privyAccessToken = await getAccessToken();
+
+      if (!privyAccessToken) {
+        throw new Error("Could not obtain a Privy access token");
+      }
+
+      if (!wallets[0]) {
+        throw new Error("No connected Ethereum wallet was found");
+      }
+
       const response = await fetch("/api/auth/world-id/context", {
         method: "POST",
       });
@@ -81,46 +107,26 @@ export function LoginForm() {
       }
 
       const privyAccessToken = await getAccessToken();
-
-      if (!privyAccessToken) {
-        throw new Error("Could not obtain a Privy access token");
-      }
-
       const wallet = wallets[0];
-      if (!wallet) {
-        throw new Error("No connected Ethereum wallet was found");
+
+      if (!privyAccessToken || !wallet) {
+        throw new Error("Wallet authentication expired. Please reconnect your wallet and try again.");
       }
 
-      const challengeResponse = await fetch("/api/auth/wallet-challenge", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ privyAccessToken }),
-      });
-      const challenge = (await challengeResponse.json()) as {
-        message?: string;
-        walletAddress?: string;
-        error?: string;
-      };
-
-      if (!challengeResponse.ok || !challenge.message || !challenge.walletAddress) {
-        throw new Error(challenge.error ?? "Could not create wallet challenge");
-      }
-
-      const signedSignature = await wallet.sign(challenge.message);
-
-      const response = await fetch("/api/auth/complete", {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          privyAccessToken,
-          worldIdProof: proof,
-          walletAddress: challenge.walletAddress,
-          walletMessage: challenge.message,
-          walletSignature: signedSignature,
+      const response = await withTimeout(
+        fetch("/api/auth/complete", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            privyAccessToken,
+            worldIdProof: proof,
+            walletAddress: wallet.address,
+          }),
         }),
-      });
+        "Authentication request timed out. Please try again.",
+      );
 
       const body = (await response.json()) as { error?: string };
 
@@ -131,11 +137,12 @@ export function LoginForm() {
       router.push("/manufacturer");
       router.refresh();
     } catch (authenticationError) {
-      setError(
+      const message =
         authenticationError instanceof Error
           ? authenticationError.message
-          : "Authentication failed",
-      );
+          : "Authentication failed";
+      setError(message);
+      throw authenticationError;
     } finally {
       setPending(false);
     }
@@ -143,6 +150,8 @@ export function LoginForm() {
 
   async function handleWorldVerify(result: WorldIdResult) {
     setWorldProofReceived(true);
+    setWorldOpen(false);
+    setError("World ID confirmed. Completing authentication…");
     await completeAuthentication(result);
   }
 
@@ -181,11 +190,34 @@ export function LoginForm() {
               try {
                 await login();
               } catch (loginError) {
-                setError(
+                const message =
                   loginError instanceof Error
                     ? loginError.message
-                    : "Wallet login failed. Choose WalletConnect or enable MetaMask and try again.",
+                    : String(loginError);
+                const isRejectedWalletConnectSession = /reject session/i.test(
+                  message,
                 );
+
+                if (isRejectedWalletConnectSession) {
+                  const connectedWallet = wallets[0];
+                  try {
+                    connectedWallet?.disconnect();
+                  } catch {}
+
+                  try {
+                    await fetch("/api/auth/logout", { method: "POST" });
+                    await logout();
+                  } catch {}
+
+                  setError(
+                    "WalletConnect rejected its previous session. Reopen the wallet login and approve a new connection.",
+                  );
+                } else {
+                  setError(
+                    message ||
+                      "Wallet login failed. Choose WalletConnect or enable MetaMask and try again.",
+                  );
+                }
               }
               return;
             }
@@ -248,7 +280,11 @@ export function LoginForm() {
           }}
           onError={(errorCode) => {
             setWorldOpen(false);
-            setError(`World ID verification failed: ${errorCode}`);
+            setError((currentError) =>
+              currentError && currentError !== "World ID confirmed. Approve the wallet signature request to finish."
+                ? currentError
+                : `World ID verification failed: ${errorCode}`,
+            );
           }}
         />
       )}

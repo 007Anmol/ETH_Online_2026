@@ -2,18 +2,14 @@ import { json, readJson } from "@/lib/api/http";
 import { verifyPrivyAccessToken } from "@/lib/auth/privy";
 import { extractEthereumWallet, getPrivyUser } from "@/lib/auth/privy-user";
 import { verifyWorldIdProof } from "@/lib/auth/verify-world-id";
-import { consumeWalletChallenge } from "@/lib/auth/wallet-challenge";
 import { createServiceClient } from "@/lib/supabase";
 import { setSession } from "@/lib/session";
 import type { Database, Session } from "@/lib/types";
-import { recoverMessageAddress } from "viem";
 
 type CompleteAuthBody = {
 	privyAccessToken?: string;
 	worldIdProof?: unknown;
 	walletAddress?: string;
-	walletMessage?: string;
-	walletSignature?: string;
 };
 
 function normalizeWalletAddress(value: string): string {
@@ -31,21 +27,14 @@ export async function POST(request: Request) {
 		privyAccessToken,
 		worldIdProof,
 		walletAddress,
-		walletMessage,
-		walletSignature,
 	} = parsed.body;
 
 	if (
 		!privyAccessToken ||
 		!worldIdProof ||
-		!walletAddress ||
-		!walletMessage ||
-		!walletSignature
+		!walletAddress
 	) {
-		return json(
-			{ error: "Privy, wallet signature, and World ID proof are required" },
-			400,
-		);
+		return json({ error: "Privy, wallet, and World ID proof are required" }, 400);
 	}
 
 	try {
@@ -59,30 +48,8 @@ export async function POST(request: Request) {
 			);
 		}
 
-		const challenge = await consumeWalletChallenge();
-		if (!challenge || challenge.message !== walletMessage) {
-			return json({ error: "Wallet challenge is missing, expired, or invalid" }, 401);
-		}
-
-		if (challenge.walletAddress !== walletAddress.trim().toLowerCase()) {
-			return json({ error: "Wallet does not match the issued challenge" }, 401);
-		}
-
-		if (challenge.walletAddress !== privyWalletAddress.trim().toLowerCase()) {
+		if (walletAddress.trim().toLowerCase() !== privyWalletAddress.trim().toLowerCase()) {
 			return json({ error: "Wallet does not match the Privy account" }, 401);
-		}
-
-		if (!/^0x[0-9a-fA-F]+$/.test(walletSignature)) {
-			return json({ error: "Invalid wallet signature format" }, 401);
-		}
-
-		const recoveredAddress = await recoverMessageAddress({
-			message: walletMessage,
-			signature: walletSignature as `0x${string}`,
-		});
-
-		if (recoveredAddress.toLowerCase() !== challenge.walletAddress) {
-			return json({ error: "Wallet signature verification failed" }, 401);
 		}
 
 		const worldVerification = await verifyWorldIdProof(worldIdProof);

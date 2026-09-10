@@ -34,7 +34,7 @@ export async function RecentVerificationDemo() {
           </Button>
         </div>
 
-        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-xl shadow-black/[0.03]">
+        <div className="vc-card rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
           <div className="flex items-center justify-between">
             <span className="font-mono text-xs text-[var(--muted)]">{product.productId}</span>
             <VerificationBadge outcome={run.outcome} />

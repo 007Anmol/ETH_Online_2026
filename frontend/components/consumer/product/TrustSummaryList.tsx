@@ -32,7 +32,7 @@ function StatusIcon({ status }: { status: VerificationStep["status"] }) {
 
 export function TrustSummaryList({ steps }: { steps: VerificationStep[] }) {
   return (
-    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
+    <div className="vc-card rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
       <p className="text-sm font-medium text-[var(--foreground)]">Why this record can be trusted</p>
 
       <ul className="mt-4 space-y-4">

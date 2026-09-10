@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, Route as RouteIcon, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Route as RouteIcon, ShieldCheck, Sparkles, PackageCheck } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ProductStatusHero } from "@/components/consumer/product/ProductStatusHero";
 import { ProductIdentityVisual } from "@/components/consumer/product/ProductIdentityVisual";
 import { ProductMetadataGrid } from "@/components/consumer/product/ProductMetadataGrid";
 import { TrustSummaryList } from "@/components/consumer/product/TrustSummaryList";
 import { ManufacturerCard } from "@/components/consumer/product/ManufacturerCard";
+import { ProductIdentityHeading } from "@/components/consumer/product/ProductIdentityHeading";
 import { ProductNotFound } from "@/components/consumer/product/ProductNotFound";
-import { productDataProvider } from "@/lib/consumer/providers";
+import { PageOrbAccent } from "@/components/consumer/three/PageOrbAccent";
+import { ownershipProvider, productDataProvider } from "@/lib/consumer/providers";
 
 export async function generateMetadata({
   params,
@@ -31,8 +33,15 @@ export default async function ConsumerProductPage({
     productDataProvider.verifyProduct(productId),
   ]);
 
+  const claimEligibility =
+    product && run.outcome === "VERIFIED"
+      ? await ownershipProvider.getClaimEligibility(productId)
+      : null;
+
   return (
-    <div className="mx-auto w-full max-w-5xl px-6 py-10 lg:px-10">
+    <div className="relative mx-auto w-full max-w-5xl px-6 py-10 lg:px-10">
+      <PageOrbAccent className="right-0 top-0 h-72 w-72" />
+
       <Link
         href="/consumer/scan"
         className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--muted)] transition-colors hover:text-[var(--foreground)]"
@@ -51,16 +60,7 @@ export default async function ConsumerProductPage({
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
               <div className="flex flex-col items-center gap-5 text-center lg:items-start lg:text-left">
                 <ProductIdentityVisual category={product.category} />
-
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--muted)]">
-                    {product.manufacturerName}
-                  </p>
-                  <h1 className="mt-2 text-2xl font-medium tracking-[-0.03em] text-[var(--foreground)] sm:text-3xl">
-                    {product.name}
-                  </h1>
-                  <p className="mt-1 font-mono text-xs text-[var(--muted)]">{product.productId}</p>
-                </div>
+                <ProductIdentityHeading product={product} />
               </div>
 
               <div className="flex flex-col gap-6">
@@ -84,6 +84,22 @@ export default async function ConsumerProductPage({
                     View blockchain proof
                   </Button>
                 </div>
+
+                {claimEligibility === "ELIGIBLE" ? (
+                  <Button
+                    href={`/consumer/product/${encodeURIComponent(product.productId)}/claim`}
+                    variant="secondary"
+                    className="gap-2 border-[var(--vc-accent)] text-[var(--vc-accent)]"
+                  >
+                    <Sparkles size={16} strokeWidth={2} />
+                    Claim product
+                  </Button>
+                ) : claimEligibility === "ALREADY_OWNED" ? (
+                  <Button href="/consumer/products" variant="secondary" className="gap-2">
+                    <PackageCheck size={16} strokeWidth={2} />
+                    View in My Products
+                  </Button>
+                ) : null}
               </div>
             </div>
 

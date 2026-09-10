@@ -13,7 +13,7 @@ function Field({ label, value }: { label: string; value: string }) {
 
 export function ProductMetadataGrid({ product }: { product: ConsumerProduct }) {
   return (
-    <div className="grid grid-cols-2 gap-x-6 gap-y-5 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 sm:grid-cols-4">
+    <div className="vc-card grid grid-cols-2 gap-x-6 gap-y-5 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 sm:grid-cols-4">
       <Field label="Category" value={productCategoryLabel(product.category)} />
       <Field label="Origin" value={formatOrNotAvailable(product.origin)} />
       <Field label="Manufactured" value={formatDate(product.manufacturingDate)} />

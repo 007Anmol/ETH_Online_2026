@@ -45,7 +45,7 @@ export function MobileBottomNav() {
                 aria-current={active ? "page" : undefined}
                 className="flex flex-1 items-center justify-center py-2"
               >
-                <span className="-translate-y-2 flex h-11 w-11 items-center justify-center rounded-full bg-[var(--foreground)] text-[var(--background)] shadow-lg shadow-black/10">
+                <span className="-translate-y-2 flex h-11 w-11 items-center justify-center rounded-full bg-[var(--vc-accent)] text-white shadow-[0_8px_20px_-6px_var(--vc-accent-glow)]">
                   <Icon size={20} strokeWidth={2} />
                 </span>
               </Link>
@@ -59,7 +59,7 @@ export function MobileBottomNav() {
               aria-label={label}
               aria-current={active ? "page" : undefined}
               className={`flex flex-1 flex-col items-center gap-1 py-2.5 text-[10px] font-medium transition-colors ${
-                active ? "text-[var(--foreground)]" : "text-[var(--muted)]"
+                active ? "text-[var(--vc-accent)]" : "text-[var(--muted)]"
               }`}
             >
               <Icon size={18} strokeWidth={active ? 2 : 1.5} />

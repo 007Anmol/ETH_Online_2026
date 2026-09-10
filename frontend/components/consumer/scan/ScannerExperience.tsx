@@ -94,7 +94,7 @@ export function ScannerExperience({
           type="button"
           onClick={handleTapToScan}
           disabled={nfcListening}
-          className="inline-flex h-11 items-center gap-2 rounded-full bg-[var(--foreground)] px-5 text-sm font-medium text-[var(--background)] transition-opacity hover:opacity-85 disabled:opacity-60"
+          className="inline-flex h-11 items-center gap-2 rounded-full bg-[var(--vc-accent)] px-5 text-sm font-medium text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_10px_24px_-8px_var(--vc-accent-glow)] disabled:translate-y-0 disabled:opacity-60 motion-reduce:hover:translate-y-0"
         >
           <Nfc size={16} strokeWidth={2} />
           {nfcListening ? "Waiting for tap…" : "Tap to scan with NFC"}

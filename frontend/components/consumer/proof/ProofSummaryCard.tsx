@@ -14,7 +14,7 @@ function Row({ label, value }: { label: string; value: ReactNode }) {
 
 export function ProofSummaryCard({ proof }: { proof: BlockchainProof }) {
   return (
-    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
+    <div className="vc-card rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
       <p className="text-[11px] uppercase tracking-[0.15em] text-[var(--muted)]">Proof status</p>
       <p className="mt-1 text-lg font-semibold tracking-[-0.01em] text-[var(--foreground)]">
         {proof.state}

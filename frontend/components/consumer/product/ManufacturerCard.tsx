@@ -12,7 +12,7 @@ function initials(name: string) {
 
 export function ManufacturerCard({ product }: { product: ConsumerProduct }) {
   return (
-    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
+    <div className="vc-card rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
       <p className="text-[11px] uppercase tracking-[0.15em] text-[var(--muted)]">Manufacturer</p>
 
       <div className="mt-3 flex items-center gap-3">

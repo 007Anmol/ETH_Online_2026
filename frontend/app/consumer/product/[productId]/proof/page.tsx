@@ -6,6 +6,7 @@ import { ProofSummaryCard } from "@/components/consumer/proof/ProofSummaryCard";
 import { ProofTechnicalDetails } from "@/components/consumer/proof/ProofTechnicalDetails";
 import { ProofFlowDiagram } from "@/components/consumer/proof/ProofFlowDiagram";
 import { EmptyState } from "@/components/consumer/states/EmptyState";
+import { PageOrbAccent } from "@/components/consumer/three/PageOrbAccent";
 import { productDataProvider } from "@/lib/consumer/providers";
 
 export async function generateMetadata({
@@ -27,7 +28,9 @@ export default async function ConsumerProductProofPage({
   const proof = await productDataProvider.getBlockchainProof(productId);
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-6 py-10 lg:px-10">
+    <div className="relative mx-auto w-full max-w-3xl px-6 py-10 lg:px-10">
+      <PageOrbAccent className="left-1/2 top-0 h-72 w-72 -translate-x-1/2" />
+
       <Link
         href={`/consumer/product/${encodeURIComponent(productId)}`}
         className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--muted)] transition-colors hover:text-[var(--foreground)]"
@@ -51,7 +54,7 @@ export default async function ConsumerProductProofPage({
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               <ProofSummaryCard proof={proof} />
-              <ProofFlowDiagram />
+              <ProofFlowDiagram state={proof.state} />
             </div>
 
             <ProofTechnicalDetails proof={proof} />

@@ -16,4 +16,49 @@
   --vc-danger-soft: rgba(239, 68, 68, 0.12);
   --vc-info: #3b82f6;
   --vc-info-soft: rgba(59, 130, 246, 0.12);
+
+  /* Brand accent — the one real color note against the monochrome base.
+     Used for hover states, active nav, timeline/orb accents. Kept out of
+     app/globals.css since it's consumer-scoped, not landing-page brand. */
+  --vc-accent: #5b5bf6;
+  --vc-accent-soft: rgba(91, 91, 246, 0.1);
+  --vc-accent-glow: rgba(91, 91, 246, 0.25);
+  --vc-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --vc-card-shadow-hover: 0 12px 32px -12px rgba(91, 91, 246, 0.28);
+}
+
+.dark {
+  /* Brighter against the dark surface so it doesn't go muddy at low opacity. */
+  --vc-accent: #8785ff;
+  --vc-accent-soft: rgba(135, 133, 255, 0.14);
+  --vc-accent-glow: rgba(135, 133, 255, 0.35);
+  --vc-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --vc-card-shadow-hover: 0 16px 40px -14px rgba(135, 133, 255, 0.35);
+}
+
+/* Shared hover treatment for consumer surface cards — border tints toward
+   the accent, a soft accent-tinted shadow lifts the card, content shifts up
+   a touch. Respects reduced motion via the .vc-card base transition being
+   short and transform-only (no layout thrash). */
+.vc-card {
+  transition:
+    border-color 0.25s ease,
+    box-shadow 0.25s ease,
+    transform 0.25s ease;
+  box-shadow: var(--vc-card-shadow);
+}
+
+.vc-card:hover {
+  border-color: var(--vc-accent);
+  box-shadow: var(--vc-card-shadow-hover);
+  transform: translateY(-2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vc-card {
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .vc-card:hover {
+    transform: none;
+  }
 }

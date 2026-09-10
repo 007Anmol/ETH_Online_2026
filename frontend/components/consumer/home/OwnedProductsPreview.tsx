@@ -62,7 +62,7 @@ export function OwnedProductsPreview() {
               {products.slice(0, 2).map((owned) => (
                 <div
                   key={owned.productId}
-                  className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5"
+                  className="vc-card rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5"
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-xs text-[var(--muted)]">

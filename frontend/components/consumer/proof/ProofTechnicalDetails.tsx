@@ -21,7 +21,7 @@ export function ProofTechnicalDetails({ proof }: { proof: BlockchainProof }) {
   const panelId = useId();
 
   return (
-    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
+    <div className="vc-card rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
       <button
         type="button"
         aria-expanded={expanded}

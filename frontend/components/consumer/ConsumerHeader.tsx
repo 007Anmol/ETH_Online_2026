@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut, ScanLine } from "lucide-react";
+import { toast } from "sonner";
 import { Container } from "@/components/ui/Container";
 import { Logo } from "@/components/ui/Logo";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
@@ -23,6 +24,11 @@ export function ConsumerHeader() {
   const pathname = usePathname();
   const { identity, status, logout } = useConsumerIdentity();
 
+  async function handleSignOut() {
+    await logout();
+    toast("Signed out");
+  }
+
   return (
     <header className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--background)]/85 backdrop-blur-xl">
       <Container>
@@ -39,7 +45,7 @@ export function ConsumerHeader() {
                   aria-current={active ? "page" : undefined}
                   className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
                     active
-                      ? "bg-[var(--foreground)] text-[var(--background)]"
+                      ? "bg-[var(--vc-accent)] text-white"
                       : "text-[var(--muted)] hover:text-[var(--foreground)]"
                   }`}
                 >
@@ -56,9 +62,9 @@ export function ConsumerHeader() {
               identity ? (
                 <button
                   type="button"
-                  onClick={logout}
+                  onClick={handleSignOut}
                   aria-label={`Sign out of ${identity.displayName}`}
-                  className="hidden items-center gap-1.5 rounded-full border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--muted)] transition-colors hover:border-[var(--foreground)] hover:text-[var(--foreground)] sm:flex"
+                  className="hidden items-center gap-1.5 rounded-full border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--muted)] transition-colors hover:border-[var(--vc-accent)] hover:text-[var(--vc-accent)] sm:flex"
                 >
                   {identity.displayName}
                   <LogOut size={13} strokeWidth={1.75} />
@@ -66,7 +72,7 @@ export function ConsumerHeader() {
               ) : (
                 <Link
                   href="/consumer/login"
-                  className="hidden items-center rounded-full border border-[var(--border)] px-4 py-2 text-xs font-medium text-[var(--foreground)] transition-colors hover:border-[var(--foreground)] sm:flex"
+                  className="hidden items-center rounded-full border border-[var(--border)] px-4 py-2 text-xs font-medium text-[var(--foreground)] transition-colors hover:border-[var(--vc-accent)] hover:text-[var(--vc-accent)] sm:flex"
                 >
                   Sign in
                 </Link>
@@ -75,7 +81,7 @@ export function ConsumerHeader() {
 
             <Link
               href="/consumer/scan"
-              className="hidden items-center gap-2 rounded-full bg-[var(--foreground)] px-4 py-2 text-xs font-medium text-[var(--background)] transition-opacity hover:opacity-85 sm:flex"
+              className="hidden items-center gap-2 rounded-full bg-[var(--vc-accent)] px-4 py-2 text-xs font-medium text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_20px_-8px_var(--vc-accent-glow)] sm:flex"
             >
               <ScanLine size={14} />
               Scan product

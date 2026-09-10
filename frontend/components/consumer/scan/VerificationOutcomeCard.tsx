@@ -49,7 +49,7 @@ export function VerificationOutcomeCard({ run, product, onScanAnother }: Verific
   const { icon: Icon, heading, iconClassName, description } = PRESENTATION[run.outcome];
 
   return (
-    <div className="w-full max-w-sm rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 text-center shadow-xl shadow-black/[0.03]">
+    <div className="vc-card w-full max-w-sm rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 text-center">
       <div className={`mx-auto flex h-14 w-14 items-center justify-center rounded-full ${iconClassName}`}>
         <Icon size={26} strokeWidth={2} />
       </div>

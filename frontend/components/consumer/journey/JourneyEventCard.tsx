@@ -3,20 +3,19 @@
 import { useId, useState } from "react";
 import { motion, useReducedMotion, AnimatePresence } from "framer-motion";
 import { ChevronDown, AlertTriangle } from "lucide-react";
+import { ProgressDot, type ProgressDotState } from "@/components/consumer/ProgressDot";
 import { formatDate, formatDateTime, formatOrNotAvailable } from "@/lib/consumer/format";
 import type { ProductJourneyEvent } from "@/lib/consumer/types";
 
-const DOT_CLASSNAME: Record<ProductJourneyEvent["state"], string> = {
-  NORMAL: "bg-[var(--foreground)]",
-  MISSING: "bg-[var(--muted)]",
-  ANOMALY: "bg-[var(--vc-danger)]",
-};
-
 export function JourneyEventCard({
   event,
+  dotState,
+  lineHighlighted,
   isLast,
 }: {
   event: ProductJourneyEvent;
+  dotState: ProgressDotState;
+  lineHighlighted: boolean;
   isLast: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -26,8 +25,15 @@ export function JourneyEventCard({
   return (
     <div className="relative flex gap-4">
       <div className="flex flex-col items-center">
-        <span className={`mt-1 h-3 w-3 shrink-0 rounded-full ${DOT_CLASSNAME[event.state]}`} />
-        {!isLast ? <span className="mt-1 w-px flex-1 bg-[var(--border)]" /> : null}
+        <span className="mt-1">
+          <ProgressDot state={dotState} />
+        </span>
+        {!isLast ? (
+          <span
+            className="mt-1 w-px flex-1 transition-colors duration-500"
+            style={{ background: lineHighlighted ? "var(--vc-accent)" : "var(--border)" }}
+          />
+        ) : null}
       </div>
 
       <div className="w-full pb-8">
@@ -78,7 +84,7 @@ export function JourneyEventCard({
               transition={{ duration: reduceMotion ? 0 : 0.25 }}
               className="overflow-hidden"
             >
-              <dl className="mt-3 grid grid-cols-2 gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+              <dl className="mt-3 grid grid-cols-2 gap-3 rounded-xl border border-[var(--vc-accent)]/25 bg-[var(--vc-accent-soft)] p-4">
                 <div>
                   <dt className="text-[10px] uppercase tracking-[0.15em] text-[var(--muted)]">
                     Checkpoint

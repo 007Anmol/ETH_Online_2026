@@ -1,5 +1,6 @@
 import { Check, Clock, ShieldOff } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { RevealGroup } from "@/components/consumer/RevealGroup";
 import type { BlockchainProofState } from "@/lib/consumer/types";
 
 const PRESENTATION: Record<
@@ -30,14 +31,19 @@ export function ProofStatusHero({ state }: { state: BlockchainProofState }) {
   const { icon: Icon, heading, iconClassName, description } = PRESENTATION[state];
 
   return (
-    <div className="text-center">
-      <div className={`mx-auto flex h-14 w-14 items-center justify-center rounded-full ${iconClassName}`}>
+    <RevealGroup className="text-center">
+      <div
+        data-reveal
+        className={`mx-auto flex h-14 w-14 items-center justify-center rounded-full ${iconClassName}`}
+      >
         <Icon size={26} strokeWidth={2} />
       </div>
-      <h1 className="mt-4 text-xl font-medium tracking-[-0.02em] text-[var(--foreground)]">
+      <h1 data-reveal className="mt-4 text-xl font-medium tracking-[-0.02em] text-[var(--foreground)]">
         {heading}
       </h1>
-      <p className="mx-auto mt-2 max-w-xs text-sm leading-6 text-[var(--muted)]">{description}</p>
-    </div>
+      <p data-reveal className="mx-auto mt-2 max-w-xs text-sm leading-6 text-[var(--muted)]">
+        {description}
+      </p>
+    </RevealGroup>
   );
 }

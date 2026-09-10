@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { JourneyTimeline } from "@/components/consumer/journey/JourneyTimeline";
+import { RevealGroup } from "@/components/consumer/RevealGroup";
 import { EmptyState } from "@/components/consumer/states/EmptyState";
+import { PageOrbAccent } from "@/components/consumer/three/PageOrbAccent";
 import { productDataProvider } from "@/lib/consumer/providers";
 import { Route as RouteIcon } from "lucide-react";
 
@@ -25,7 +27,9 @@ export default async function ConsumerProductJourneyPage({
   const journey = await productDataProvider.getJourney(productId);
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-6 py-10 lg:px-10">
+    <div className="relative mx-auto w-full max-w-3xl px-6 py-10 lg:px-10">
+      <PageOrbAccent className="left-1/2 top-0 h-72 w-72 -translate-x-1/2" />
+
       <Link
         href={`/consumer/product/${encodeURIComponent(productId)}`}
         className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--muted)] transition-colors hover:text-[var(--foreground)]"
@@ -34,14 +38,17 @@ export default async function ConsumerProductJourneyPage({
         Product
       </Link>
 
-      <div className="mt-6 mb-10 text-center">
-        <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--muted)]">
+      <RevealGroup className="mt-6 mb-10 text-center">
+        <p data-reveal className="text-[11px] uppercase tracking-[0.2em] text-[var(--muted)]">
           Product journey
         </p>
-        <h1 className="mt-2 text-2xl font-medium tracking-[-0.03em] text-[var(--foreground)] sm:text-3xl">
+        <h1
+          data-reveal
+          className="mt-2 text-2xl font-medium tracking-[-0.03em] text-[var(--foreground)] sm:text-3xl"
+        >
           Where this product has been
         </h1>
-      </div>
+      </RevealGroup>
 
       <div className="flex justify-center">
         {journey && journey.events.length > 0 ? (

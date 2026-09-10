@@ -37,12 +37,12 @@ export function DemoIdPicker({ disabled, onSubmit }: DemoIdPickerProps) {
           value={value}
           disabled={disabled}
           onChange={(event) => setValue(event.target.value)}
-          className="h-11 flex-1 rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 text-sm text-[var(--foreground)] outline-none transition-colors focus:border-[var(--foreground)] disabled:opacity-50"
+          className="h-11 flex-1 rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 text-sm text-[var(--foreground)] outline-none transition-all duration-200 focus:border-[var(--vc-accent)] focus:shadow-[0_0_0_4px_var(--vc-accent-soft)] disabled:opacity-50"
         />
         <button
           type="submit"
           disabled={disabled || !value.trim()}
-          className="h-11 shrink-0 rounded-full bg-[var(--foreground)] px-5 text-sm font-medium text-[var(--background)] transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-40"
+          className="h-11 shrink-0 rounded-full bg-[var(--vc-accent)] px-5 text-sm font-medium text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_20px_-6px_var(--vc-accent-glow)] disabled:cursor-not-allowed disabled:translate-y-0 disabled:bg-[var(--foreground)] disabled:opacity-40 disabled:shadow-none motion-reduce:hover:translate-y-0"
         >
           Verify
         </button>
@@ -58,7 +58,7 @@ export function DemoIdPicker({ disabled, onSubmit }: DemoIdPickerProps) {
               setValue(id);
               submit(id);
             }}
-            className="rounded-full border border-[var(--border)] px-3 py-1.5 font-mono text-xs text-[var(--muted)] transition-colors hover:border-[var(--foreground)] hover:text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-full border border-[var(--border)] px-3 py-1.5 font-mono text-xs text-[var(--muted)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--vc-accent)] hover:text-[var(--vc-accent)] hover:shadow-[0_4px_16px_-4px_var(--vc-accent-glow)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0 disabled:hover:shadow-none motion-reduce:hover:translate-y-0"
           >
             {id}
           </button>

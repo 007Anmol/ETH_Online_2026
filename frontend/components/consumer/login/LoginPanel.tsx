@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Globe, Mail } from "lucide-react";
 import { ErrorState } from "@/components/consumer/states/ErrorState";
 import { LoadingState } from "@/components/consumer/states/LoadingState";
+import { RevealGroup } from "@/components/consumer/RevealGroup";
 import { useConsumerIdentity } from "@/lib/consumer/hooks/use-consumer-identity";
 import type { ConsumerLoginMethod } from "@/lib/consumer/types";
 
@@ -39,12 +40,14 @@ export function LoginPanel() {
 
   return (
     <div className="mx-auto w-full max-w-sm">
-      <div className="text-center">
-        <h1 className="text-2xl font-medium tracking-[-0.03em]">Sign in to VeriChain</h1>
-        <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
+      <RevealGroup className="text-center">
+        <h1 data-reveal className="text-2xl font-medium tracking-[-0.03em]">
+          Sign in to VeriChain
+        </h1>
+        <p data-reveal className="mt-3 text-sm leading-6 text-[var(--muted)]">
           Sign in to keep your verified products and ownership history with you.
         </p>
-      </div>
+      </RevealGroup>
 
       <div className="mt-8 space-y-3">
         {OPTIONS.map(({ method, label, icon: Icon }) => {
@@ -56,7 +59,7 @@ export function LoginPanel() {
               type="button"
               disabled={status === "authenticating"}
               onClick={() => handleLogin(method)}
-              className="flex h-12 w-full items-center justify-center gap-2.5 rounded-full border border-[var(--border)] text-sm font-medium text-[var(--foreground)] transition-colors hover:border-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-12 w-full items-center justify-center gap-2.5 rounded-full border border-[var(--border)] text-sm font-medium text-[var(--foreground)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--vc-accent)] hover:shadow-[0_8px_20px_-8px_var(--vc-accent-glow)] disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-50 disabled:shadow-none motion-reduce:hover:translate-y-0"
             >
               {isPending ? (
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--foreground)]" />

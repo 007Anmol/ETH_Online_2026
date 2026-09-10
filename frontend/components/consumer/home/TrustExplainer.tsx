@@ -44,11 +44,17 @@ export function TrustExplainer() {
           {STEPS.map((step) => (
             <div
               key={step.number}
-              className="flex flex-col gap-4 border-b border-r border-[var(--border)] p-8 last:border-r-0 sm:[&:nth-child(2)]:border-r-0 lg:[&:nth-child(2)]:border-r lg:[&:nth-child(4)]:border-r-0"
+              className="group flex flex-col gap-4 border-b border-r border-[var(--border)] p-8 transition-colors duration-300 last:border-r-0 hover:bg-[var(--vc-accent-soft)] sm:[&:nth-child(2)]:border-r-0 lg:[&:nth-child(2)]:border-r lg:[&:nth-child(4)]:border-r-0"
             >
               <div className="flex items-center justify-between">
-                <span className="font-mono text-xs text-[var(--muted)]">{step.number}</span>
-                <step.icon size={18} strokeWidth={1.5} className="text-[var(--muted)]" />
+                <span className="font-mono text-xs text-[var(--muted)] transition-colors duration-300 group-hover:text-[var(--vc-accent)]">
+                  {step.number}
+                </span>
+                <step.icon
+                  size={18}
+                  strokeWidth={1.5}
+                  className="text-[var(--muted)] transition-colors duration-300 group-hover:text-[var(--vc-accent)]"
+                />
               </div>
 
               <div>

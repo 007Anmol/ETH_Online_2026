@@ -1,12 +1,16 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import gsap from "gsap";
 import { Copy, LogOut, Package, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
+import { CenteredAlert } from "@/components/consumer/CenteredAlert";
 import { EmptyState } from "@/components/consumer/states/EmptyState";
 import { LoadingState } from "@/components/consumer/states/LoadingState";
 import { RevealGroup } from "@/components/consumer/RevealGroup";
+import { StatCounter } from "@/components/consumer/StatCounter";
 import { useConsumerIdentity } from "@/lib/consumer/hooks/use-consumer-identity";
 import { useOwnedProducts } from "@/lib/consumer/hooks/use-owned-products";
 import { truncateMiddle } from "@/lib/consumer/format";
@@ -30,8 +34,29 @@ export function ProfilePanel() {
   const router = useRouter();
   const { identity, status, logout } = useConsumerIdentity();
   const { products, status: productsStatus } = useOwnedProducts();
+  const avatarRef = useRef<HTMLDivElement>(null);
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
+
+  useEffect(() => {
+    const avatar = avatarRef.current;
+    if (!avatar || !identity) return;
+
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const tween = gsap.from(avatar, {
+      scale: 0.6,
+      opacity: 0,
+      duration: 0.6,
+      ease: "back.out(1.7)",
+    });
+
+    return () => {
+      tween.kill();
+    };
+  }, [identity]);
 
   async function handleSignOut() {
+    setConfirmSignOut(false);
     await logout();
     router.push("/consumer/login");
   }
@@ -65,7 +90,10 @@ export function ProfilePanel() {
   return (
     <RevealGroup className="mx-auto flex w-full max-w-md flex-col gap-6">
       <div data-reveal className="vc-card rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 text-center">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-[var(--border)] text-lg font-medium text-[var(--foreground)]">
+        <div
+          ref={avatarRef}
+          className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-[var(--border)] text-lg font-medium text-[var(--foreground)] shadow-[0_0_0_6px_var(--vc-accent-soft)]"
+        >
           {initials(identity.displayName) || "VC"}
         </div>
         <h1 className="mt-4 text-lg font-medium tracking-[-0.02em] text-[var(--foreground)]">
@@ -99,9 +127,17 @@ export function ProfilePanel() {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-[11px] uppercase tracking-[0.15em] text-[var(--muted)]">Products</p>
-            <p className="mt-1 text-sm text-[var(--foreground)]">
-              {productsStatus === "loading" ? "Loading…" : `${products.length} verified`}
-            </p>
+            {productsStatus === "loading" ? (
+              <p className="mt-1 text-sm text-[var(--foreground)]">Loading…</p>
+            ) : (
+              <div className="mt-1 flex items-baseline gap-1.5">
+                <StatCounter
+                  value={products.length}
+                  className="text-lg font-medium tracking-[-0.02em] text-[var(--foreground)]"
+                />
+                <span className="text-sm text-[var(--muted)]">verified</span>
+              </div>
+            )}
           </div>
           <span className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border)] text-[var(--muted)]">
             <Package size={16} strokeWidth={1.5} />
@@ -125,12 +161,23 @@ export function ProfilePanel() {
       <button
         type="button"
         data-reveal
-        onClick={handleSignOut}
+        onClick={() => setConfirmSignOut(true)}
         className="mx-auto inline-flex h-11 items-center gap-2 rounded-full border border-[var(--border)] px-5 text-sm font-medium text-[var(--muted)] transition-colors hover:border-[var(--vc-danger)] hover:text-[var(--vc-danger)]"
       >
         <LogOut size={14} strokeWidth={1.75} />
         Sign out
       </button>
+
+      <CenteredAlert
+        open={confirmSignOut}
+        tone="confirm"
+        title="Sign out?"
+        description="You'll need to sign in again to see your verified products."
+        confirmLabel="Sign out"
+        onConfirm={handleSignOut}
+        cancelLabel="Cancel"
+        onCancel={() => setConfirmSignOut(false)}
+      />
     </RevealGroup>
   );
 }

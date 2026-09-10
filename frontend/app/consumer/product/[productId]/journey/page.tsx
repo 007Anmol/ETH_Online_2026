@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { JourneyTimeline } from "@/components/consumer/journey/JourneyTimeline";
 import { RevealGroup } from "@/components/consumer/RevealGroup";
 import { EmptyState } from "@/components/consumer/states/EmptyState";
+import { BackgroundAmbient } from "@/components/consumer/BackgroundAmbient";
 import { productDataProvider } from "@/lib/consumer/providers";
 import { Route as RouteIcon } from "lucide-react";
 
@@ -26,7 +27,9 @@ export default async function ConsumerProductJourneyPage({
   const journey = await productDataProvider.getJourney(productId);
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-6 py-10 lg:px-10">
+    <div className="relative mx-auto w-full max-w-3xl px-6 py-10 lg:px-10">
+      <BackgroundAmbient className="left-1/2 top-0 h-72 w-72 -translate-x-1/2" />
+
       <Link
         href={`/consumer/product/${encodeURIComponent(productId)}`}
         className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--muted)] transition-colors hover:text-[var(--foreground)]"

@@ -3,6 +3,7 @@ import { HeroSection } from "@/components/consumer/home/HeroSection";
 import { TrustExplainer } from "@/components/consumer/home/TrustExplainer";
 import { RecentVerificationDemo } from "@/components/consumer/home/RecentVerificationDemo";
 import { OwnedProductsPreview } from "@/components/consumer/home/OwnedProductsPreview";
+import { ClosingCta } from "@/components/consumer/home/ClosingCta";
 
 export const metadata: Metadata = {
   title: "VeriChain — Know what you're buying",
@@ -16,6 +17,7 @@ export default function ConsumerHomePage() {
       <TrustExplainer />
       <RecentVerificationDemo />
       <OwnedProductsPreview />
+      <ClosingCta />
     </>
   );
 }

@@ -1,9 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import gsap from "gsap";
 import { ScanLine, Package } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ProductCollectionCard } from "@/components/consumer/products/ProductCollectionCard";
+import { StatCounter } from "@/components/consumer/StatCounter";
 import { EmptyState } from "@/components/consumer/states/EmptyState";
 import { ErrorState } from "@/components/consumer/states/ErrorState";
 import { LoadingState } from "@/components/consumer/states/LoadingState";
@@ -19,6 +21,7 @@ export function ProductCollectionGrid() {
   const { items, status, refresh } = useProductCollection();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
+  const gridRef = useRef<HTMLDivElement>(null);
 
   const manufacturerCount = useMemo(() => {
     const names = new Set(items.map((item) => item.product?.manufacturerName).filter(Boolean));
@@ -41,6 +44,30 @@ export function ProductCollectionGrid() {
       );
     });
   }, [items, filter, query]);
+
+  useEffect(() => {
+    const grid = gridRef.current;
+    if (!grid) return;
+
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const cards = grid.querySelectorAll("[data-collection-card]");
+    if (cards.length === 0) return;
+
+    if (reduceMotion) {
+      gsap.set(cards, { opacity: 1, y: 0, scale: 1 });
+      return;
+    }
+
+    const tween = gsap.fromTo(
+      cards,
+      { opacity: 0, y: 16, scale: 0.97 },
+      { opacity: 1, y: 0, scale: 1, duration: 0.4, ease: "power2.out", stagger: 0.06 },
+    );
+
+    return () => {
+      tween.kill();
+    };
+  }, [visible]);
 
   if (identityStatus === "checking") {
     return <LoadingState label="Checking your sign-in status" />;
@@ -97,17 +124,19 @@ export function ProductCollectionGrid() {
     <div className="flex flex-col gap-8">
       <div className="flex items-center gap-8">
         <div>
-          <p className="text-2xl font-medium tracking-[-0.02em] text-[var(--foreground)]">
-            {items.length}
-          </p>
+          <StatCounter
+            value={items.length}
+            className="text-2xl font-medium tracking-[-0.02em] text-[var(--foreground)]"
+          />
           <p className="text-xs text-[var(--muted)]">
             Verified product{items.length === 1 ? "" : "s"}
           </p>
         </div>
         <div>
-          <p className="text-2xl font-medium tracking-[-0.02em] text-[var(--foreground)]">
-            {manufacturerCount}
-          </p>
+          <StatCounter
+            value={manufacturerCount}
+            className="text-2xl font-medium tracking-[-0.02em] text-[var(--foreground)]"
+          />
           <p className="text-xs text-[var(--muted)]">
             Manufacturer{manufacturerCount === 1 ? "" : "s"}
           </p>
@@ -155,9 +184,11 @@ export function ProductCollectionGrid() {
           description="Try a different search term or filter."
         />
       ) : (
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div ref={gridRef} className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {visible.map((item) => (
-            <ProductCollectionCard key={item.productId} item={item} />
+            <div key={item.productId} data-collection-card className="h-full">
+              <ProductCollectionCard item={item} />
+            </div>
           ))}
         </div>
       )}

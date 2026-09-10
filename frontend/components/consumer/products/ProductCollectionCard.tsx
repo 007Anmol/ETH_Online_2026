@@ -8,7 +8,7 @@ export function ProductCollectionCard({ item }: { item: CollectionItem }) {
   return (
     <Link
       href={`/consumer/product/${encodeURIComponent(item.productId)}`}
-      className="vc-card group flex flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--vc-accent)]"
+      className="vc-card group flex h-full flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--vc-accent)]"
     >
       <div className="p-4 pb-0">
         <ProductIdentityVisual category={item.product?.category ?? null} />

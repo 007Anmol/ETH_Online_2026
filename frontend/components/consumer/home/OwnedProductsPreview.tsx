@@ -14,7 +14,7 @@ export function OwnedProductsPreview() {
   const { products, status: productsStatus, refresh } = useOwnedProducts();
 
   return (
-    <section className="py-20 lg:py-28">
+    <section className="border-b border-[var(--border)] py-20 lg:py-28">
       <div className="mx-auto w-full max-w-3xl px-6 lg:px-10">
         <div className="text-center">
           <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--muted)]">

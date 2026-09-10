@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useState } from "react";
 import { motion, useReducedMotion, AnimatePresence } from "framer-motion";
 import { Check, Package } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
+import { CenteredAlert } from "@/components/consumer/CenteredAlert";
 import { VerificationBadge } from "@/components/consumer/VerificationBadge";
 import { ClaimProgress } from "@/components/consumer/claim/ClaimProgress";
 import { ErrorState } from "@/components/consumer/states/ErrorState";
@@ -22,16 +22,12 @@ export function ClaimPanel({
 }) {
   const { eligibility, stage, error, claim, retry } = useClaimProduct(product.productId);
   const reduceMotion = useReducedMotion();
-  const announcedSuccess = useRef(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
-  useEffect(() => {
-    if (stage === "success" && !announcedSuccess.current) {
-      announcedSuccess.current = true;
-      toast.success("Product claimed", {
-        description: `${product.name} is now in your VeriChain collection.`,
-      });
-    }
-  }, [stage, product.name]);
+  function handleConfirmClaim() {
+    setConfirmOpen(false);
+    void claim();
+  }
 
   if (stage === "checking") {
     return <LoadingState label="Checking claim eligibility" />;
@@ -118,7 +114,7 @@ export function ClaimPanel({
       <button
         type="button"
         disabled={claiming}
-        onClick={() => void claim()}
+        onClick={() => setConfirmOpen(true)}
         className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[var(--vc-accent)] px-6 text-sm font-medium text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_10px_24px_-8px_var(--vc-accent-glow)] disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-70 disabled:shadow-none motion-reduce:hover:translate-y-0"
       >
         {claiming ? (
@@ -130,6 +126,17 @@ export function ClaimPanel({
           "Claim product"
         )}
       </button>
+
+      <CenteredAlert
+        open={confirmOpen}
+        tone="confirm"
+        title="Claim this product?"
+        description={`${product.name} will be associated with your VeriChain identity. This can't be undone from here.`}
+        confirmLabel="Yes, claim it"
+        onConfirm={handleConfirmClaim}
+        cancelLabel="Not now"
+        onCancel={() => setConfirmOpen(false)}
+      />
     </div>
   );
 }

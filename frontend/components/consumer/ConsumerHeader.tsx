@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut, ScanLine } from "lucide-react";
@@ -7,6 +8,7 @@ import { toast } from "sonner";
 import { Container } from "@/components/ui/Container";
 import { Logo } from "@/components/ui/Logo";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { CenteredAlert } from "@/components/consumer/CenteredAlert";
 import { useConsumerIdentity } from "@/lib/consumer/hooks/use-consumer-identity";
 
 const NAV_LINKS = [
@@ -23,8 +25,10 @@ function isActive(pathname: string, href: string) {
 export function ConsumerHeader() {
   const pathname = usePathname();
   const { identity, status, logout } = useConsumerIdentity();
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
 
   async function handleSignOut() {
+    setConfirmSignOut(false);
     await logout();
     toast("Signed out");
   }
@@ -62,7 +66,7 @@ export function ConsumerHeader() {
               identity ? (
                 <button
                   type="button"
-                  onClick={handleSignOut}
+                  onClick={() => setConfirmSignOut(true)}
                   aria-label={`Sign out of ${identity.displayName}`}
                   className="hidden items-center gap-1.5 rounded-full border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--muted)] transition-colors hover:border-[var(--vc-accent)] hover:text-[var(--vc-accent)] sm:flex"
                 >
@@ -89,6 +93,19 @@ export function ConsumerHeader() {
           </div>
         </nav>
       </Container>
+
+      {identity ? (
+        <CenteredAlert
+          open={confirmSignOut}
+          tone="confirm"
+          title="Sign out?"
+          description="You'll need to sign in again to see your verified products."
+          confirmLabel="Sign out"
+          onConfirm={handleSignOut}
+          cancelLabel="Cancel"
+          onCancel={() => setConfirmSignOut(false)}
+        />
+      ) : null}
     </header>
   );
 }

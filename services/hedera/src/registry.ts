@@ -3,7 +3,7 @@
  * Call these from API routes / lib — never from the browser.
  */
 
-import registryAbiJson from "@verichain/shared/abi/VeriChainRegistry.json";
+import registryAbiJson from "../../../packages/shared/abi/VeriChainRegistry.json";
 import { getHederaConfig, sendContractCall } from "./client";
 import type { Abi, Address } from "viem";
 

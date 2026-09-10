@@ -7,7 +7,8 @@
     "noEmit": true,
     "resolveJsonModule": true,
     "paths": {
-      "@verichain/shared": ["../../packages/shared/index.ts"]
+      "@verichain/shared": ["../../packages/shared/index.ts"],
+      "@verichain/shared/*": ["../../packages/shared/*"]
     }
   },
   "include": ["src/**/*.ts"]

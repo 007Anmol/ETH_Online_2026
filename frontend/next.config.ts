@@ -9,6 +9,11 @@ const nextConfig: NextConfig = {
   transpilePackages: ["@verichain/shared", "@verichain/hedera"],
   turbopack: {
     root: path.resolve(frontendDir, ".."),
+    resolveAlias: {
+      // Relative to turbopack.root (repo root). Absolute aliases break Turbopack.
+      "@verichain/shared/abi/VeriChainRegistry.json":
+        "./packages/shared/abi/VeriChainRegistry.json",
+    },
   },
   allowedDevOrigins: ["pedigree-landscape-jump.ngrok-free.dev"],
 };

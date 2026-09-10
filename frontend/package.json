@@ -18,7 +18,7 @@
     "test:batches": "tsx scripts/test-batches.ts",
     "test:auth-security": "tsx scripts/test-complete-login.ts && tsx scripts/test-auth-security.ts",
     "test:auth-flow": "tsx scripts/test-real-authenticated-flow.ts",
-    "test:nfc": "tsx scripts/test-bind.ts && tsx scripts/test-verify.ts && tsx scripts/test-simulate.ts && tsx scripts/test-nfc-flow.ts && tsx scripts/test-http.ts && tsx scripts/test-edges.ts",
+    "test:joint-proof": "tsx --require ./scripts/stub-server-only.cjs scripts/joint-proof.ts",
     "test": "npm run test:shared && npm run test:schema && npm run test:batches && npm run test:nfc"
   },
   "dependencies": {

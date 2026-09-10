@@ -118,6 +118,11 @@ export async function revokeTag(
         chain_tx_hash: chainTxHash,
       });
     }
+
+    await supabase
+      .from("products")
+      .update({ status: "TAG_PENDING" })
+      .eq("id", tag.product_id);
   }
 
   return { ok: true, tag_id, status: "REVOKED" };

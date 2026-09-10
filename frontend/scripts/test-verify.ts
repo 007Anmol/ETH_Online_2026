@@ -1,7 +1,9 @@
+import "./load-env";
 import { createClient } from "@supabase/supabase-js";
 import { randomBytes } from "node:crypto";
 import { DEMO_BATCH_CODE, DEMO_PLANT_ID, DEMO_PRODUCT_CATEGORY, DEMO_PRODUCT_CODE, DEMO_TAG_UID } from "../lib/constants";
 import type { Database } from "../lib/database.types";
+import { deriveOnChainId, normalizeTagUid } from "../lib/crypto/hash";
 import { aesCmac, parseAes128Key } from "../lib/nfc/cmac";
 import { bindTag } from "../lib/nfc/bind-tag";
 import { signTapPayload } from "../lib/nfc/tap-payload";
@@ -107,6 +109,55 @@ async function main() {
     replay.result === "DUPLICATE" && replay.product_code === DEMO_PRODUCT_CODE,
     JSON.stringify(replay),
   );
+
+  const { data: onChainTag } = await supabase
+    .from("nfc_tags")
+    .select("id, tag_uid, chain_tx_hash")
+    .eq("status", "BOUND")
+    .not("chain_tx_hash", "is", null)
+    .limit(1)
+    .maybeSingle();
+
+  if (!onChainTag) {
+    check(
+      "authentic consume stores chain_tx_hash on the nonce row",
+      false,
+      "no on-chain BOUND tag found; bind a product first",
+    );
+  } else {
+    const livePayload = signTapPayload(onChainTag.tag_uid, randomBytes(8).toString("hex"));
+    const liveAuthentic = await verifyTap(supabase, livePayload);
+    const liveNonceHash = deriveOnChainId(
+      `${normalizeTagUid(livePayload.tag_uid)}:${livePayload.nonce}`,
+    );
+    const { data: liveNonce } = await supabase
+      .from("verification_nonces")
+      .select("consumed, chain_tx_hash")
+      .eq("nonce_hash", liveNonceHash)
+      .maybeSingle();
+    check(
+      "authentic consume stores chain_tx_hash on the nonce row",
+      liveAuthentic.result === "AUTHENTIC" &&
+        liveNonce?.consumed === true &&
+        Boolean(liveNonce.chain_tx_hash) &&
+        liveNonce.chain_tx_hash === liveAuthentic.chain_tx_hash,
+      liveAuthentic.result === "AUTHENTIC"
+        ? liveNonce?.chain_tx_hash ?? "missing"
+        : liveAuthentic.failure_reason,
+    );
+
+    await verifyTap(supabase, livePayload);
+    const { data: afterReplay } = await supabase
+      .from("verification_nonces")
+      .select("chain_tx_hash")
+      .eq("nonce_hash", liveNonceHash)
+      .maybeSingle();
+    check(
+      "duplicate does not clear the consume tx hash",
+      afterReplay?.chain_tx_hash === liveAuthentic.chain_tx_hash,
+      afterReplay?.chain_tx_hash ?? "missing",
+    );
+  }
 
   const colonPayload = signTapPayload("04:de:ad:be:ef:01", randomBytes(8).toString("hex"));
   const spaced = await verifyTap(supabase, {

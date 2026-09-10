@@ -173,7 +173,7 @@ export async function verifyTap(
   if (existingNonce) {
     await supabase
       .from("verification_nonces")
-      .update({ consumed: true, consumed_at: now })
+      .update({ consumed: true, consumed_at: now, chain_tx_hash: chainTxHash })
       .eq("id", existingNonce.id);
   } else {
     await supabase.from("verification_nonces").insert({
@@ -181,6 +181,7 @@ export async function verifyTap(
       nonce_hash: nonceHash,
       consumed: true,
       consumed_at: now,
+      chain_tx_hash: chainTxHash,
     });
   }
 
@@ -192,6 +193,7 @@ export async function verifyTap(
     batch_id: facts.batch_id,
     tag_id: tag.id,
     payload: { tag_uid: tagUid, nonce_hash: nonceHash, chain_tx_hash: chainTxHash },
+    chain_tx_hash: chainTxHash,
   });
 
   await recordAttempt(supabase, {

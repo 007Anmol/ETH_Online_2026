@@ -24,6 +24,39 @@ type WorldContextResponse = {
 
 type WorldIdResult = IDKitResult;
 
+type WalletChallengeResponse = {
+  message?: string;
+  walletAddress?: string;
+  error?: string;
+};
+
+type SignableWallet = {
+  address: string;
+  sign: (message: string) => Promise<string>;
+};
+
+function asSignableWallet(wallet: unknown): SignableWallet | null {
+  if (
+    !wallet ||
+    typeof wallet !== "object" ||
+    !("address" in wallet) ||
+    !("sign" in wallet)
+  ) {
+    return null;
+  }
+
+  const candidate = wallet as { address?: unknown; sign?: unknown };
+
+  if (typeof candidate.address !== "string" || typeof candidate.sign !== "function") {
+    return null;
+  }
+
+  return {
+    address: candidate.address,
+    sign: candidate.sign as (message: string) => Promise<string>,
+  };
+}
+
 async function withTimeout<T>(promise: Promise<T>, message: string): Promise<T> {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
@@ -107,11 +140,46 @@ export function LoginForm() {
       }
 
       const privyAccessToken = await getAccessToken();
-      const wallet = wallets[0];
+      const connectedWallet = asSignableWallet(wallets[0]);
 
-      if (!privyAccessToken || !wallet) {
+      if (!privyAccessToken || !connectedWallet) {
         throw new Error("Wallet authentication expired. Please reconnect your wallet and try again.");
       }
+
+      const challengeResponse = await withTimeout(
+        fetch("/api/auth/wallet-challenge", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({ privyAccessToken }),
+        }),
+        "Could not start the wallet signature challenge. Please try again.",
+      );
+      const challengeBody = (await challengeResponse.json()) as WalletChallengeResponse;
+
+      if (!challengeResponse.ok || !challengeBody.message) {
+        throw new Error(
+          challengeBody.error ?? "Could not create a wallet signature challenge",
+        );
+      }
+
+      const signingWallet =
+        wallets
+          .map(asSignableWallet)
+          .find(
+            (wallet) =>
+              wallet &&
+              wallet.address.toLowerCase() ===
+                challengeBody.walletAddress?.toLowerCase(),
+          ) ?? connectedWallet;
+
+      if (!signingWallet) {
+        throw new Error("Connected wallet cannot sign the authentication challenge");
+      }
+
+      setError("World ID confirmed. Approve the wallet signature request to finish.");
+      const walletSignature = await signingWallet.sign(challengeBody.message);
 
       const response = await withTimeout(
         fetch("/api/auth/complete", {
@@ -122,7 +190,8 @@ export function LoginForm() {
           body: JSON.stringify({
             privyAccessToken,
             worldIdProof: proof,
-            walletAddress: wallet.address,
+            walletAddress: signingWallet.address,
+            walletSignature,
           }),
         }),
         "Authentication request timed out. Please try again.",
@@ -151,7 +220,7 @@ export function LoginForm() {
   async function handleWorldVerify(result: WorldIdResult) {
     setWorldProofReceived(true);
     setWorldOpen(false);
-    setError("World ID confirmed. Completing authentication…");
+    setError("World ID confirmed. Approve the wallet signature request to finish.");
     await completeAuthentication(result);
   }
 
@@ -249,7 +318,7 @@ export function LoginForm() {
 
         {worldProofReceived && (
           <p className="relative z-10 mt-4 text-xs text-emerald-300">
-            World ID proof received. Completing backend verification…
+            World ID proof received. Approve the wallet signature to finish.
           </p>
         )}
 

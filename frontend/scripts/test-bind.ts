@@ -167,8 +167,8 @@ async function main() {
     .neq("product_code", DEMO_PRODUCT_CODE);
   const stillPending = manufacturerPending?.length ?? 0;
   stillPending >= 1
-    ? pass("did not bind Harsheel products in this test", `pending=${stillPending}`)
-    : fail("did not bind Harsheel products in this test", "no pending manufacturer products");
+    ? pass("left manufacturer products unbound", `pending=${stillPending}`)
+    : fail("left manufacturer products unbound", "no pending manufacturer products");
 
   console.log("");
   console.log(failed === 0 ? "Bind API checks: all passed" : `Bind API checks: ${failed} failed`);

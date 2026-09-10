@@ -24,7 +24,7 @@ export default async function ManufacturerDashboard() {
           Welcome, {session.displayName ?? "Manufacturer"}
         </h1>
         <p className="mt-1 text-sm text-zinc-500">
-          Phase 1 dashboard · {session.role} ·{" "}
+          {session.role} ·{" "}
           <span className="font-mono text-xs">{session.walletAddress}</span>
         </p>
       </div>
@@ -85,11 +85,6 @@ export default async function ManufacturerDashboard() {
         </div>
       </div>
 
-      {/* Phase 1 story note */}
-      <div className="mt-6 rounded-lg border border-blue-100 bg-blue-50 px-5 py-4 text-sm text-blue-700">
-        <strong>Phase 1 story:</strong> Login → Create batch of 3 → Saachi binds NFC →
-        First tap = AUTHENTIC → Replay = DUPLICATE.
-      </div>
     </main>
   );
 }

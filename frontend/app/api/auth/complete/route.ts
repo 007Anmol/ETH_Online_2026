@@ -1,6 +1,11 @@
 import { json, readJson } from "@/lib/api/http";
 import { verifyPrivyAccessToken } from "@/lib/auth/privy";
 import { extractEthereumWallet, getPrivyUser } from "@/lib/auth/privy-user";
+import {
+	normalizeWalletAddress,
+	verifyWalletSignature,
+} from "@/lib/auth/verify-wallet-signature";
+import { consumeWalletChallenge } from "@/lib/auth/wallet-challenge";
 import { verifyWorldIdProof } from "@/lib/auth/verify-world-id";
 import { createServiceClient } from "@/lib/supabase";
 import { setSession } from "@/lib/session";
@@ -10,11 +15,8 @@ type CompleteAuthBody = {
 	privyAccessToken?: string;
 	worldIdProof?: unknown;
 	walletAddress?: string;
+	walletSignature?: string;
 };
-
-function normalizeWalletAddress(value: string): string {
-	return value.trim().toLowerCase();
-}
 
 export async function POST(request: Request) {
 	const parsed = await readJson<CompleteAuthBody>(request);
@@ -27,7 +29,9 @@ export async function POST(request: Request) {
 		privyAccessToken,
 		worldIdProof,
 		walletAddress,
+		walletSignature,
 	} = parsed.body;
+	const signature = walletSignature?.trim() ?? "";
 
 	if (
 		!privyAccessToken ||
@@ -37,7 +41,36 @@ export async function POST(request: Request) {
 		return json({ error: "Privy, wallet, and World ID proof are required" }, 400);
 	}
 
+	if (!signature) {
+		return json({ error: "Wallet signature is required" }, 400);
+	}
+
 	try {
+		const challenge = await consumeWalletChallenge();
+
+		if (!challenge) {
+			return json(
+				{ error: "Wallet challenge is missing, expired, or already used" },
+				401,
+			);
+		}
+
+		const submittedWallet = normalizeWalletAddress(walletAddress);
+
+		if (submittedWallet !== challenge.walletAddress) {
+			return json({ error: "Wallet does not match the signed challenge" }, 401);
+		}
+
+		const signatureMatches = await verifyWalletSignature({
+			address: challenge.walletAddress,
+			message: challenge.message,
+			signature,
+		});
+
+		if (!signatureMatches) {
+			return json({ error: "Wallet signature is invalid" }, 401);
+		}
+
 		const { userId } = await verifyPrivyAccessToken(privyAccessToken);
 		const privyWalletAddress = extractEthereumWallet(await getPrivyUser(userId));
 
@@ -48,7 +81,7 @@ export async function POST(request: Request) {
 			);
 		}
 
-		if (walletAddress.trim().toLowerCase() !== privyWalletAddress.trim().toLowerCase()) {
+		if (submittedWallet !== normalizeWalletAddress(privyWalletAddress)) {
 			return json({ error: "Wallet does not match the Privy account" }, 401);
 		}
 

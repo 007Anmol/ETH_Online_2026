@@ -47,10 +47,7 @@ export default async function ProductPage({
 
   return (
     <section className="mx-auto w-full max-w-5xl">
-      <p className="text-xs font-medium uppercase tracking-widest text-teal-800">
-        Phase 1 · Product
-      </p>
-      <h1 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900">
+      <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
         {product.product_name}
       </h1>
       <p className="mt-1 font-mono text-sm text-zinc-500">{product.product_code}</p>

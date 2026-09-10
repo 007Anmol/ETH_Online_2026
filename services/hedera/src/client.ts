@@ -17,7 +17,7 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 
 /**
- * Team 1 — Hedera testnet operator.
+ * Hedera testnet operator.
  * Reads server env only. Do not import this from client components.
  */
 export type HederaOperatorConfig = {

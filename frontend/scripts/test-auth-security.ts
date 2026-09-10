@@ -34,6 +34,35 @@ async function main() {
   const unauthenticatedDeploy = await fetch(`${TEST_BASE}/api/deploy`);
   check("unauthenticated deployment is rejected", unauthenticatedDeploy.status === 401);
 
+  const completeWithoutSignature = await fetch(`${TEST_BASE}/api/auth/complete`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      privyAccessToken: "token",
+      worldIdProof: { proof: "unused" },
+      walletAddress: "0x1111111111111111111111111111111111111111",
+    }),
+  });
+  check(
+    "complete auth without a wallet signature is rejected",
+    completeWithoutSignature.status === 400,
+  );
+
+  const completeWithoutChallenge = await fetch(`${TEST_BASE}/api/auth/complete`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      privyAccessToken: "token",
+      worldIdProof: { proof: "unused" },
+      walletAddress: "0x1111111111111111111111111111111111111111",
+      walletSignature: `0x${"ab".repeat(65)}`,
+    }),
+  });
+  check(
+    "complete auth without a one-time challenge is rejected",
+    completeWithoutChallenge.status === 401,
+  );
+
   finish();
 }
 

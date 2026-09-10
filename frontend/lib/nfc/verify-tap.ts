@@ -5,7 +5,7 @@ import { tapCmacIsValid } from "@/lib/nfc/tap-payload";
 import type { NfcTapPayload, VerificationResult, VerifyProductResponse } from "@/lib/types";
 import { consumeNonceOnChain } from "@verichain/hedera";
 
-/** Team 1 verify (database). Hedera consumeNonce will be called via `@verichain/hedera`. */
+/** Verify a tap. CMAC is checked off-chain; Hedera consumeNonce is the replay authority. */
 
 type VerifyInput = NfcTapPayload & {
   scanned_by?: string | null;

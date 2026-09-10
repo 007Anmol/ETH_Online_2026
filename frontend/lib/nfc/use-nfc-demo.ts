@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { VerifyView } from "@/components/verify-result";
 import { requestSimulate, requestVerify } from "@/lib/nfc/client-api";
 import { defaultBoundProductId, type BindableProduct } from "@/lib/nfc/product-summary";
-import { UNKNOWN_TAP_PAYLOAD } from "@/lib/nfc/tap-payload";
+import { UNKNOWN_TAP_PAYLOAD } from "@/lib/nfc/unknown-tap";
 import type { NfcTapPayload } from "@/lib/types";
 
 export function useNfcDemo(

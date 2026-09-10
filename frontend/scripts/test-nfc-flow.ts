@@ -8,7 +8,7 @@ import {
 import type { Database } from "../lib/database.types";
 import { bindTag } from "../lib/nfc/bind-tag";
 import { simulateTap } from "../lib/nfc/simulate-tap";
-import { UNKNOWN_TAP_PAYLOAD } from "../lib/nfc/tap-payload";
+import { UNKNOWN_TAP_PAYLOAD } from "../lib/nfc/unknown-tap";
 import { verifyTap } from "../lib/nfc/verify-tap";
 import { loadEnvFiles } from "./load-env";
 

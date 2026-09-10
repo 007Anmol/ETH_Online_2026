@@ -9,7 +9,7 @@ import {
 import type { ProductStatus, TagStatus } from "@/lib/types";
 import { bindTagOnChain } from "@verichain/hedera";
 
-/** Team 1 NFC bind (database). Hedera bindTag will be called via `@verichain/hedera`. */
+/** Bind an NFC tag to a product. Hedera bindTag runs first, then Supabase. */
 
 type BindInput = {
   product_id: string;

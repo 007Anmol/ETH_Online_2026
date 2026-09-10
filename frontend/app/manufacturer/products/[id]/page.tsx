@@ -89,17 +89,17 @@ export default async function ProductDetailPage({ params }: Props) {
           {product.status === "TAG_BOUND" ? (
             <div className="flex items-center justify-between">
               <p>
-                ✅ NFC tag bound. Saachi&apos;s{" "}
+                NFC tag bound.{" "}
                 <Link href="/simulator" className="font-medium text-zinc-700 hover:underline">
                   Simulator →
                 </Link>{" "}
-                to test authenticate &amp; replay.
+                to test authentic and replay taps.
               </p>
               {result.tagId && <RevokeButton tagId={result.tagId} />}
             </div>
           ) : (
             <p>
-              ⏳ Awaiting NFC bind. Saachi binds this product on{" "}
+              Awaiting NFC bind. Attach a chip on the{" "}
               <Link href="/manufacturer/nfc" className="font-medium text-zinc-700 hover:underline">
                 NFC bind screen →
               </Link>

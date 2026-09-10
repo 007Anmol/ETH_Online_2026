@@ -1,4 +1,4 @@
--- Phase 1 demo manufacturer. Safe to re-run.
+-- Demo manufacturer. Safe to re-run.
 -- Values must match frontend/lib/constants.ts (wallet, batch, product, category).
 
 insert into organizations (name, type, wallet_address, world_id_verified)

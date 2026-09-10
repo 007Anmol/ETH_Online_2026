@@ -3,7 +3,8 @@ import { randomBytes } from "node:crypto";
 import { DEMO_PRODUCT_CODE, DEMO_TAG_UID } from "../lib/constants";
 import type { Database } from "../lib/database.types";
 import { simulateTap } from "../lib/nfc/simulate-tap";
-import { signTapPayload, UNKNOWN_TAP_PAYLOAD } from "../lib/nfc/tap-payload";
+import { signTapPayload } from "../lib/nfc/tap-payload";
+import { UNKNOWN_TAP_PAYLOAD } from "../lib/nfc/unknown-tap";
 import { verifyTap } from "../lib/nfc/verify-tap";
 import { loadEnvFiles } from "./load-env";
 

@@ -35,7 +35,7 @@ function subkeys(key: Buffer): { k1: Buffer; k2: Buffer } {
   return { k1, k2 };
 }
 
-/** AES-128/CMAC (RFC 4493). Used only on the server. */
+/** AES-128/CMAC (RFC 4493). Server-only — do not import from client components. */
 export function aesCmac(key: Buffer, message: Buffer): Buffer {
   if (key.length !== BLOCK) {
     throw new Error("AES-128 CMAC key must be 16 bytes");

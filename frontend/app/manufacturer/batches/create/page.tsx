@@ -21,7 +21,7 @@ export default function CreateBatchPage() {
           <p className="mt-1 text-sm text-zinc-500">
             One batch creates <span className="font-medium text-zinc-700">N product digital twins</span>,
             all with status <code className="rounded bg-zinc-100 px-1 py-0.5 text-xs">TAG_PENDING</code> until
-            Saachi binds an NFC tag.
+            an NFC tag is bound.
           </p>
         </div>
         <CreateBatchForm />

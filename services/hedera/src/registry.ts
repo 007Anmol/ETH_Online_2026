@@ -1,5 +1,5 @@
 /**
- * Team 1 identity writes to VeriChainRegistry.
+ * Identity writes to VeriChainRegistry.
  * Call these from API routes / lib — never from the browser.
  */
 

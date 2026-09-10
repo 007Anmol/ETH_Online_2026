@@ -25,9 +25,9 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
 
-    if (!body.id || !body.product_id || !body.sender || !body.receiver || !body.status) {
+    if (!body.product_id || !body.status) {
       return NextResponse.json(
-        { error: "Missing required shipment fields: id, product_id, sender, receiver, status" },
+        { error: "Missing required shipment fields: product_id, status" },
         { status: 400 }
       );
     }
@@ -35,11 +35,12 @@ export async function POST(request: Request) {
     const store = new SupabaseStore();
     const shipment = await store.saveShipment({
       id: body.id,
+      on_chain_shipment_id: body.on_chain_shipment_id,
       product_id: body.product_id,
-      sender: body.sender,
-      receiver: body.receiver,
+      sender_org_id: body.sender_org_id ?? null,
+      receiver_org_id: body.receiver_org_id ?? null,
       status: body.status,
-      tx_hash: body.tx_hash ?? null,
+      chain_tx_hash: body.chain_tx_hash ?? null,
     });
 
     return NextResponse.json({ shipment }, { status: 201 });
@@ -62,7 +63,7 @@ export async function PATCH(request: Request) {
     const store = new SupabaseStore();
     const shipment = await store.updateShipment(body.id, {
       status: body.status,
-      tx_hash: body.tx_hash,
+      chain_tx_hash: body.chain_tx_hash,
     });
 
     return NextResponse.json({ shipment });

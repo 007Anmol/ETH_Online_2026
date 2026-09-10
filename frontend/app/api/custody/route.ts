@@ -26,9 +26,9 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
 
-    if (!body.product_id || !body.from_address || !body.to_address) {
+    if (!body.product_id || !body.from_org_id || !body.to_org_id) {
       return NextResponse.json(
-        { error: "Missing required fields: product_id, from_address, to_address" },
+        { error: "Missing required fields: product_id, from_org_id, to_org_id" },
         { status: 400 }
       );
     }
@@ -36,9 +36,9 @@ export async function POST(request: Request) {
     const store = new SupabaseStore();
     const transfer = await store.saveCustodyTransfer({
       product_id: body.product_id,
-      from_address: body.from_address,
-      to_address: body.to_address,
-      tx_hash: body.tx_hash ?? null,
+      from_org_id: body.from_org_id,
+      to_org_id: body.to_org_id,
+      chain_tx_hash: body.chain_tx_hash ?? null,
     });
 
     return NextResponse.json({ transfer }, { status: 201 });

@@ -2,11 +2,13 @@ import type { PaymentRecord } from "../../../packages/shared/types/payment";
 import type { AnomalyStore, StoredAnomaly, StoredCheckpoint } from "./anomaly";
 import type { PaymentStore } from "../../hedera/src/payments";
 
-type ShipmentRow = { id: string; product_id: string; sender: string; receiver: string; status: "CREATED" | "IN_TRANSIT" | "RECEIVED" | "CANCELLED"; tx_hash?: string | null; created_at?: string; updated_at?: string };
-type CustodyRow = { id?: string; product_id: string; from_address: string; to_address: string; tx_hash?: string | null; created_at?: string };
-type CheckpointRow = { id?: string; request_id?: string | null; product_id: string; latitude: number; longitude: number; checkpoint: string; observed_at: string; risk_score?: number | null; tx_hash?: string | null; created_at?: string };
-type AnomalyRow = { id?: string; request_id?: string | null; product_id: string; risk_score: number; reason: string; explanation?: string | null; status: "OPEN" | "RESOLVED" | "DISMISSED"; tx_hash?: string | null; resolved_at?: string | null; created_at?: string };
-type EscrowRow = { id: string; product_id: string; payer: string; payee: string; amount_wei: string; status: "ACTIVE" | "FROZEN" | "RELEASED" | "RESOLVED"; tx_hash?: string | null; created_at?: string; updated_at?: string };
+type ShipmentStatus = "CREATED" | "IN_TRANSIT" | "RECEIVED" | "CANCELLED";
+type AnomalyStatus = "OPEN" | "RESOLVED" | "DISMISSED";
+type ShipmentRow = { id: string; on_chain_shipment_id?: string | number | null; product_id: string; sender_org_id?: string | null; receiver_org_id?: string | null; status: ShipmentStatus; chain_tx_hash?: string | null; created_at?: string; updated_at?: string };
+type CustodyRow = { id?: string; product_id: string; from_org_id?: string | null; to_org_id?: string | null; chain_tx_hash?: string | null; transferred_at?: string };
+type CheckpointRow = { id?: string; request_id?: string | null; product_id: string; checkpoint_type: string; latitude: number; longitude: number; anomaly_decision?: "NORMAL" | "ANOMALY" | null; chain_tx_hash?: string | null; recorded_at: string; risk_score?: number | null };
+type AnomalyRow = { id?: string; request_id?: string | null; product_id: string; risk_score: number; reason: string; explanation?: string | null; status: AnomalyStatus; chain_tx_hash?: string | null; resolved_at?: string | null; created_at?: string };
+type EscrowRow = { id: string; on_chain_escrow_id?: string | number | null; product_id: string; buyer_org_id?: string | null; seller_org_id?: string | null; amount?: string | number | null; currency: string; status: "PENDING" | "LOCKED" | "RELEASED" | "FROZEN" | "REFUNDED"; chain_tx_hash?: string | null; created_at?: string; updated_at?: string };
 
 type SupabaseConfig = { url: string; key: string };
 
@@ -56,12 +58,13 @@ export class SupabaseStore implements AnomalyStore, PaymentStore {
       method: "POST",
       body: JSON.stringify({
         request_id: checkpoint.requestId,
-        product_id: Number(checkpoint.point.productId),
+        product_id: await databaseProductId(checkpoint.point.productId),
         latitude: checkpoint.point.latitude,
         longitude: checkpoint.point.longitude,
-        checkpoint: checkpoint.point.checkpoint,
-        observed_at: new Date(checkpoint.point.timestamp * 1000).toISOString(),
+        checkpoint_type: checkpointType(checkpoint.point.checkpoint),
+        recorded_at: new Date(checkpoint.point.timestamp * 1000).toISOString(),
         risk_score: checkpoint.riskScore,
+        anomaly_decision: checkpoint.riskScore >= 61 ? "ANOMALY" : "NORMAL",
       }),
     });
   }
@@ -71,12 +74,12 @@ export class SupabaseStore implements AnomalyStore, PaymentStore {
       method: "POST",
       body: JSON.stringify({
         request_id: anomaly.requestId,
-        product_id: Number(anomaly.result.productId),
+        product_id: await databaseProductId(anomaly.result.productId),
         risk_score: anomaly.result.riskScore,
         reason: anomaly.result.findings.join(" ") || anomaly.result.explanation,
         explanation: anomaly.result.explanation,
         status: anomaly.status,
-        tx_hash: anomaly.txHash ?? null,
+        chain_tx_hash: anomaly.txHash ?? null,
       }),
     });
   }
@@ -110,31 +113,33 @@ export class SupabaseStore implements AnomalyStore, PaymentStore {
     const params: string[] = [];
     if (filters?.productId) params.push(`product_id=eq.${encodeURIComponent(filters.productId)}`);
     if (filters?.status) params.push(`status=eq.${encodeURIComponent(filters.status)}`);
-    if (filters?.sender) params.push(`sender=eq.${encodeURIComponent(filters.sender)}`);
-    if (filters?.receiver) params.push(`receiver=eq.${encodeURIComponent(filters.receiver)}`);
+    if (filters?.sender) params.push(`sender_org_id=eq.${encodeURIComponent(filters.sender)}`);
+    if (filters?.receiver) params.push(`receiver_org_id=eq.${encodeURIComponent(filters.receiver)}`);
     const query = params.length > 0 ? `?${params.join("&")}&order=created_at.desc` : "?order=created_at.desc";
     return (await supabaseRequest<ShipmentRow[]>(`shipments${query}`)) ?? [];
   }
 
-  async saveShipment(shipment: { id: number | string; product_id: number | string; sender: string; receiver: string; status: ShipmentRow["status"]; tx_hash?: string | null }): Promise<ShipmentRow> {
+  async saveShipment(shipment: { id?: string; on_chain_shipment_id?: string | number; product_id: string; sender_org_id?: string | null; receiver_org_id?: string | null; status: ShipmentRow["status"]; chain_tx_hash?: string | null }): Promise<ShipmentRow> {
     const result = await supabaseRequest<ShipmentRow[]>("shipments", {
       method: "POST",
       body: JSON.stringify({
-        id: Number(shipment.id),
-        product_id: Number(shipment.product_id),
-        sender: shipment.sender,
-        receiver: shipment.receiver,
+        ...(shipment.id && /^[0-9a-f-]{36}$/i.test(shipment.id) ? { id: shipment.id } : {}),
+        ...(shipment.on_chain_shipment_id !== undefined ? { on_chain_shipment_id: shipment.on_chain_shipment_id } : {}),
+        product_id: await databaseProductId(shipment.product_id),
+        sender_org_id: shipment.sender_org_id ?? null,
+        receiver_org_id: shipment.receiver_org_id ?? null,
         status: shipment.status,
-        tx_hash: shipment.tx_hash ?? null,
+        chain_tx_hash: shipment.chain_tx_hash ?? null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }),
     });
-    return result?.[0] ?? { ...shipment, id: String(shipment.id), product_id: String(shipment.product_id) };
+    return result?.[0] as ShipmentRow;
   }
 
-  async updateShipment(id: number | string, updates: { status?: ShipmentRow["status"]; tx_hash?: string | null }): Promise<ShipmentRow | undefined> {
-    const result = await supabaseRequest<ShipmentRow[]>(`shipments?id=eq.${encodeURIComponent(String(id))}`, {
+  async updateShipment(id: string, updates: { status?: ShipmentRow["status"]; chain_tx_hash?: string | null }): Promise<ShipmentRow | undefined> {
+    const column = /^[0-9a-f-]{36}$/i.test(id) ? "id" : "on_chain_shipment_id";
+    const result = await supabaseRequest<ShipmentRow[]>(`shipments?${column}=eq.${encodeURIComponent(String(id))}`, {
       method: "PATCH",
       body: JSON.stringify({
         ...updates,
@@ -145,21 +150,21 @@ export class SupabaseStore implements AnomalyStore, PaymentStore {
   }
 
   async getCustodyTransfers(productId: string): Promise<CustodyRow[]> {
-    return (await supabaseRequest<CustodyRow[]>(`custody_transfers?product_id=eq.${encodeURIComponent(productId)}&order=created_at.desc`)) ?? [];
+    return (await supabaseRequest<CustodyRow[]>(`custody_transfers?product_id=eq.${encodeURIComponent(productId)}&order=transferred_at.desc`)) ?? [];
   }
 
-  async saveCustodyTransfer(transfer: { product_id: number | string; from_address: string; to_address: string; tx_hash?: string | null }): Promise<CustodyRow> {
+  async saveCustodyTransfer(transfer: { product_id: string; from_org_id: string; to_org_id: string; chain_tx_hash?: string | null }): Promise<CustodyRow> {
     const result = await supabaseRequest<CustodyRow[]>("custody_transfers", {
       method: "POST",
       body: JSON.stringify({
-        product_id: Number(transfer.product_id),
-        from_address: transfer.from_address,
-        to_address: transfer.to_address,
-        tx_hash: transfer.tx_hash ?? null,
-        created_at: new Date().toISOString(),
+        product_id: String(transfer.product_id),
+        from_org_id: transfer.from_org_id,
+        to_org_id: transfer.to_org_id,
+        chain_tx_hash: transfer.chain_tx_hash ?? null,
+        transferred_at: new Date().toISOString(),
       }),
     });
-    return result?.[0] ?? { ...transfer, product_id: String(transfer.product_id) };
+    return result?.[0] as CustodyRow;
   }
 
   async getEscrows(productId?: string): Promise<EscrowRow[]> {
@@ -167,26 +172,29 @@ export class SupabaseStore implements AnomalyStore, PaymentStore {
     return (await supabaseRequest<EscrowRow[]>(`escrows${query}`)) ?? [];
   }
 
-  async saveEscrow(escrow: { id: number | string; product_id: number | string; payer: string; payee: string; amount_wei: string | number; status: EscrowRow["status"]; tx_hash?: string | null }): Promise<EscrowRow> {
+  async saveEscrow(escrow: { id: number | string; product_id: string; buyer_org_id?: string | null; seller_org_id?: string | null; amount: string | number; currency: string; status: EscrowRow["status"]; chain_tx_hash?: string | null }): Promise<EscrowRow> {
     const result = await supabaseRequest<EscrowRow[]>("escrows", {
       method: "POST",
       body: JSON.stringify({
-        id: Number(escrow.id),
-        product_id: Number(escrow.product_id),
-        payer: escrow.payer,
-        payee: escrow.payee,
-        amount_wei: escrow.amount_wei,
+        ...(typeof escrow.id === "string" && /^[0-9a-f-]{36}$/i.test(escrow.id) ? { id: escrow.id } : {}),
+        on_chain_escrow_id: escrow.id,
+        product_id: await databaseProductId(escrow.product_id),
+        buyer_org_id: escrow.buyer_org_id ?? null,
+        seller_org_id: escrow.seller_org_id ?? null,
+        amount: escrow.amount,
+        currency: escrow.currency,
         status: escrow.status,
-        tx_hash: escrow.tx_hash ?? null,
+        chain_tx_hash: escrow.chain_tx_hash ?? null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }),
     });
-    return result?.[0] ?? { ...escrow, id: String(escrow.id), product_id: String(escrow.product_id), amount_wei: String(escrow.amount_wei) };
+    return result?.[0] as EscrowRow;
   }
 
-  async updateEscrow(id: number | string, updates: { status?: EscrowRow["status"]; tx_hash?: string | null }): Promise<EscrowRow | undefined> {
-    const result = await supabaseRequest<EscrowRow[]>(`escrows?id=eq.${encodeURIComponent(String(id))}`, {
+  async updateEscrow(id: string, updates: { status?: EscrowRow["status"]; chain_tx_hash?: string | null }): Promise<EscrowRow | undefined> {
+    const column = /^[0-9a-f-]{36}$/i.test(id) ? "id" : "on_chain_escrow_id";
+    const result = await supabaseRequest<EscrowRow[]>(`escrows?${column}=eq.${encodeURIComponent(String(id))}`, {
       method: "PATCH",
       body: JSON.stringify({
         ...updates,
@@ -197,7 +205,7 @@ export class SupabaseStore implements AnomalyStore, PaymentStore {
   }
 
   async getCheckpoints(productId: string): Promise<CheckpointRow[]> {
-    return (await supabaseRequest<CheckpointRow[]>(`checkpoints?product_id=eq.${encodeURIComponent(productId)}&order=observed_at.desc`)) ?? [];
+    return (await supabaseRequest<CheckpointRow[]>(`checkpoints?product_id=eq.${encodeURIComponent(productId)}&order=recorded_at.desc`)) ?? [];
   }
 
   async saveCheckpointRecord(checkpoint: Omit<CheckpointRow, "id" | "created_at">): Promise<CheckpointRow | undefined> {
@@ -213,11 +221,28 @@ export class SupabaseStore implements AnomalyStore, PaymentStore {
     return (await supabaseRequest<AnomalyRow[]>(`anomalies${query}`)) ?? [];
   }
 
-  async updateAnomaly(requestId: string, updates: { status: AnomalyRow["status"]; tx_hash?: string | null }): Promise<AnomalyRow | undefined> {
+  async updateAnomaly(requestId: string, updates: { status: AnomalyRow["status"]; chain_tx_hash?: string | null }): Promise<AnomalyRow | undefined> {
     const result = await supabaseRequest<AnomalyRow[]>(`anomalies?request_id=eq.${encodeURIComponent(requestId)}`, {
       method: "PATCH",
       body: JSON.stringify({ ...updates, resolved_at: updates.status === "RESOLVED" ? new Date().toISOString() : null }),
     });
     return result?.[0];
   }
+}
+
+function checkpointType(label: string): "FACTORY" | "DISTRIBUTOR" | "LOGISTICS_HUB" | "RETAILER" | "CONSUMER_POINT_OF_SALE" {
+  const normalized = label.trim().toUpperCase().replace(/[ -]+/g, "_");
+  if (["FACTORY", "DISTRIBUTOR", "LOGISTICS_HUB", "RETAILER", "CONSUMER_POINT_OF_SALE"].includes(normalized)) {
+    return normalized as ReturnType<typeof checkpointType>;
+  }
+  return "LOGISTICS_HUB";
+}
+
+async function databaseProductId(productId: string): Promise<string> {
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(productId)) return productId;
+  const rows = await supabaseRequest<Array<{ id: string }>>(
+    `products?select=id&token_id=eq.${encodeURIComponent(productId)}&limit=1`,
+  );
+  if (!rows[0]) throw new Error(`No product found for token_id ${productId}`);
+  return rows[0].id;
 }

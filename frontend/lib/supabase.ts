@@ -1,10 +1,11 @@
 export type ShipmentRecord = {
   id: string;
+  on_chain_shipment_id?: string | number | null;
   product_id: string;
-  sender: string;
-  receiver: string;
+  sender_org_id?: string | null;
+  receiver_org_id?: string | null;
   status: "CREATED" | "IN_TRANSIT" | "RECEIVED" | "CANCELLED";
-  tx_hash?: string | null;
+  chain_tx_hash?: string | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -12,10 +13,10 @@ export type ShipmentRecord = {
 export type CustodyRecord = {
   id?: string;
   product_id: string;
-  from_address: string;
-  to_address: string;
-  tx_hash?: string | null;
-  created_at?: string;
+  from_org_id?: string | null;
+  to_org_id?: string | null;
+  chain_tx_hash?: string | null;
+  transferred_at?: string;
 };
 
 export type CheckpointRecord = {
@@ -24,11 +25,11 @@ export type CheckpointRecord = {
   product_id: string;
   latitude: number;
   longitude: number;
-  checkpoint: string;
-  observed_at: string;
+  checkpoint_type: string;
+  recorded_at: string;
+  anomaly_decision?: "NORMAL" | "ANOMALY" | null;
   risk_score?: number | null;
-  tx_hash?: string | null;
-  created_at?: string;
+  chain_tx_hash?: string | null;
 };
 
 export type AnomalyRecord = {
@@ -39,7 +40,7 @@ export type AnomalyRecord = {
   reason: string;
   explanation?: string | null;
   status: "OPEN" | "RESOLVED" | "DISMISSED";
-  tx_hash?: string | null;
+  chain_tx_hash?: string | null;
   resolved_at?: string | null;
   created_at?: string;
 };
@@ -47,11 +48,12 @@ export type AnomalyRecord = {
 export type EscrowRecord = {
   id: string;
   product_id: string;
-  payer: string;
-  payee: string;
-  amount_wei: string;
-  status: "ACTIVE" | "FROZEN" | "RELEASED" | "RESOLVED";
-  tx_hash?: string | null;
+  buyer_org_id?: string | null;
+  seller_org_id?: string | null;
+  amount?: string | number | null;
+  currency: string;
+  status: "PENDING" | "LOCKED" | "RELEASED" | "FROZEN" | "REFUNDED";
+  chain_tx_hash?: string | null;
   created_at?: string;
   updated_at?: string;
 };

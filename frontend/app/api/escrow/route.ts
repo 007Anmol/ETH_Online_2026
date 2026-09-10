@@ -22,9 +22,9 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
 
-    if (!body.id || !body.product_id || !body.payer || !body.payee || !body.amount_wei || !body.status) {
+    if (!body.id || !body.product_id || !body.amount || !body.currency || !body.status) {
       return NextResponse.json(
-        { error: "Missing required escrow fields: id, product_id, payer, payee, amount_wei, status" },
+        { error: "Missing required escrow fields: id, product_id, amount, currency, status" },
         { status: 400 }
       );
     }
@@ -33,11 +33,12 @@ export async function POST(request: Request) {
     const escrow = await store.saveEscrow({
       id: body.id,
       product_id: body.product_id,
-      payer: body.payer,
-      payee: body.payee,
-      amount_wei: body.amount_wei,
+      buyer_org_id: body.buyer_org_id ?? null,
+      seller_org_id: body.seller_org_id ?? null,
+      amount: body.amount,
+      currency: body.currency,
       status: body.status,
-      tx_hash: body.tx_hash ?? null,
+      chain_tx_hash: body.chain_tx_hash ?? null,
     });
 
     return NextResponse.json({ escrow }, { status: 201 });
@@ -60,7 +61,7 @@ export async function PATCH(request: Request) {
     const store = new SupabaseStore();
     const escrow = await store.updateEscrow(body.id, {
       status: body.status,
-      tx_hash: body.tx_hash,
+      chain_tx_hash: body.chain_tx_hash,
     });
 
     return NextResponse.json({ escrow });

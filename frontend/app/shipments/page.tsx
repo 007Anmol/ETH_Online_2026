@@ -85,11 +85,10 @@ export default function ShipmentsPage() {
       if (record && shipmentExists) {
         createShipmentRecord({
           id: record[0].toString(),
+          on_chain_shipment_id: record[0].toString(),
           product_id: record[1].toString(),
-          sender: record[2],
-          receiver: record[3],
           status: shipmentStatuses[record[4]] ?? "CREATED",
-          tx_hash: transactionHash,
+          chain_tx_hash: transactionHash,
         })
           .catch(() => {})
           .finally(() => {
@@ -127,11 +126,10 @@ export default function ShipmentsPage() {
           if (nextShipmentId && userAddress) {
             createShipmentRecord({
               id: nextShipmentId.toString(),
+              on_chain_shipment_id: nextShipmentId.toString(),
               product_id: productId,
-              sender: userAddress,
-              receiver: receiver,
               status: "CREATED",
-              tx_hash: hash,
+              chain_tx_hash: hash,
             }).catch(() => {});
           }
         },
@@ -155,7 +153,7 @@ export default function ShipmentsPage() {
           setMessage(`Shipment acceptance submitted. Tx: ${hash.slice(0, 10)}...`);
           updateShipmentRecord(record[0].toString(), {
             status: "RECEIVED",
-            tx_hash: hash,
+            chain_tx_hash: hash,
           })
             .catch(() => {})
             .finally(() => {
@@ -292,17 +290,17 @@ export default function ShipmentsPage() {
                         <tr key={s.id} className="hover:bg-gray-50/60">
                           <td className="py-3 font-semibold">#{s.id}</td>
                           <td className="py-3">#{s.product_id}</td>
-                          <td className="py-3 font-mono text-[11px] text-gray-600">{s.sender.slice(0, 10)}...</td>
-                          <td className="py-3 font-mono text-[11px] text-gray-600">{s.receiver.slice(0, 10)}...</td>
+                          <td className="py-3 font-mono text-[11px] text-gray-600">{s.sender_org_id?.slice(0, 10) ?? "—"}</td>
+                          <td className="py-3 font-mono text-[11px] text-gray-600">{s.receiver_org_id?.slice(0, 10) ?? "—"}</td>
                           <td className="py-3">
                             <span className="inline-flex rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-800">
                               {s.status}
                             </span>
                           </td>
                           <td className="py-3 font-mono text-[11px]">
-                            {s.tx_hash ? (
+                            {s.chain_tx_hash ? (
                               <span className="flex items-center gap-1 text-gray-600">
-                                {s.tx_hash.slice(0, 10)}...
+                                {s.chain_tx_hash.slice(0, 10)}...
                                 <ExternalLink size={10} />
                               </span>
                             ) : (

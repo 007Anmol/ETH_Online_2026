@@ -33,6 +33,20 @@ function address(name: string): Address {
   return required(name) as Address;
 }
 
+async function resolveTokenId(productId: string): Promise<bigint> {
+  const supabaseUrl = required("SUPABASE_URL").replace(/\/$/, "");
+  const serviceKey = required("SUPABASE_SERVICE_ROLE_KEY");
+  const response = await fetch(`${supabaseUrl}/rest/v1/products?select=token_id&id=eq.${encodeURIComponent(productId)}&limit=1`, {
+    headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` },
+  });
+  if (!response.ok) throw new Error(`Product lookup failed (${response.status})`);
+  const rows = (await response.json()) as Array<{ token_id: string | number | null }>;
+  if (rows[0]?.token_id === null || rows[0]?.token_id === undefined) {
+    throw new Error(`Product ${productId} has no token_id`);
+  }
+  return BigInt(rows[0].token_id);
+}
+
 export function createViemBlockchainGateway(): BlockchainGateway {
   const account = privateKeyToAccount(required("AGENT_PRIVATE_KEY") as `0x${string}`);
   const transport = http(required("AGENT_RPC_URL"));
@@ -48,15 +62,16 @@ export function createViemBlockchainGateway(): BlockchainGateway {
   }
 
   return {
-    recordAnomaly: (productId, result) => send(walletClient.writeContract({ chain: null, address: registry, abi: registryAbi, functionName: "recordAnomaly", args: [BigInt(productId), BigInt(result.riskScore), keccak256(stringToHex(result.explanation))] })),
-    freezeEscrowPool: (productId) => send(walletClient.writeContract({ chain: null, address: escrow, abi: escrowAbi, functionName: "freezeEscrowPool", args: [BigInt(productId)] })),
-    resolveAnomaly: (productId) => send(walletClient.writeContract({ chain: null, address: registry, abi: registryAbi, functionName: "resolveAnomaly", args: [BigInt(productId)] })),
+    recordAnomaly: async (productId, result) => send(walletClient.writeContract({ chain: null, address: registry, abi: registryAbi, functionName: "recordAnomaly", args: [await resolveTokenId(productId), BigInt(result.riskScore), keccak256(stringToHex(result.explanation))] })),
+    freezeEscrowPool: async (productId) => send(walletClient.writeContract({ chain: null, address: escrow, abi: escrowAbi, functionName: "freezeEscrowPool", args: [await resolveTokenId(productId)] })),
+    resolveAnomaly: async (productId) => send(walletClient.writeContract({ chain: null, address: registry, abi: registryAbi, functionName: "resolveAnomaly", args: [await resolveTokenId(productId)] })),
     resolveEscrowPool: async (productId) => {
+      const tokenId = await resolveTokenId(productId);
       const nextEscrowId = await publicClient.readContract({ address: escrow, abi: escrowAbi, functionName: "nextEscrowId" });
       let lastHash = "";
       for (let escrowId = 1n; escrowId < nextEscrowId; escrowId++) {
         const record = await publicClient.readContract({ address: escrow, abi: escrowAbi, functionName: "escrows", args: [escrowId] });
-        if (record[0] === BigInt(productId) && record[4] === 1) {
+        if (record[0] === tokenId && record[4] === 1) {
           lastHash = await send(walletClient.writeContract({ chain: null, address: escrow, abi: escrowAbi, functionName: "resolveEscrow", args: [escrowId] }));
         }
       }

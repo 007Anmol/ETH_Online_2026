@@ -3,7 +3,7 @@ import { SupabaseStore } from "../../../../../services/agent/src/supabase";
 
 export async function GET(request: Request) {
   const productId = new URL(request.url).searchParams.get("productId");
-  if (!productId || !/^\d+$/.test(productId)) return NextResponse.json({ error: "Valid productId is required" }, { status: 400 });
+  if (!productId) return NextResponse.json({ error: "Valid product UUID is required" }, { status: 400 });
   try {
     return NextResponse.json({ productId, checkpoints: await new SupabaseStore().getCheckpoints(productId) });
   } catch (error) {

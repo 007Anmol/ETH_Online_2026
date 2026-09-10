@@ -92,11 +92,10 @@ export default function EscrowPage() {
             saveEscrowRecord({
               id: (nextEscrowId ?? 1n).toString(),
               product_id: productId,
-              payer: userAddress,
-              payee: payee,
-              amount_wei: parseEther(amount).toString(),
-              status: "ACTIVE",
-              tx_hash: hash,
+              amount: parseEther(amount).toString(),
+              currency: "ETH",
+              status: "LOCKED",
+              chain_tx_hash: hash,
             })
               .catch(() => {})
               .finally(() => {
@@ -280,12 +279,12 @@ export default function EscrowPage() {
                         <tr key={e.id} className="hover:bg-gray-50/60">
                           <td className="py-3 font-semibold">#{e.id}</td>
                           <td className="py-3">#{e.product_id}</td>
-                          <td className="py-3 font-mono text-[11px] text-gray-600">{e.payer.slice(0, 10)}...</td>
-                          <td className="py-3 font-mono text-[11px] text-gray-600">{e.payee.slice(0, 10)}...</td>
-                          <td className="py-3 font-mono">{e.amount_wei}</td>
+                          <td className="py-3 font-mono text-[11px] text-gray-600">{e.buyer_org_id?.slice(0, 10) ?? "—"}</td>
+                          <td className="py-3 font-mono text-[11px] text-gray-600">{e.seller_org_id?.slice(0, 10) ?? "—"}</td>
+                          <td className="py-3 font-mono">{e.amount ?? "—"}</td>
                           <td className="py-3">
                             <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                              e.status === "ACTIVE" ? "bg-blue-50 text-blue-700" :
+                              e.status === "LOCKED" ? "bg-blue-50 text-blue-700" :
                               e.status === "FROZEN" ? "bg-red-50 text-red-700" :
                               "bg-green-50 text-green-700"
                             }`}>
@@ -293,9 +292,9 @@ export default function EscrowPage() {
                             </span>
                           </td>
                           <td className="py-3 font-mono text-[11px]">
-                            {e.tx_hash ? (
+                            {e.chain_tx_hash ? (
                               <span className="flex items-center gap-1 text-gray-600">
-                                {e.tx_hash.slice(0, 10)}...
+                                {e.chain_tx_hash.slice(0, 10)}...
                                 <ExternalLink size={10} />
                               </span>
                             ) : (

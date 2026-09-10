@@ -3,7 +3,7 @@ import { SupabaseStore } from "../../../../services/agent/src/supabase";
 
 export async function GET(request: Request) {
   const productId = new URL(request.url).searchParams.get("productId") ?? undefined;
-  if (productId && !/^\d+$/.test(productId)) return NextResponse.json({ error: "Invalid productId" }, { status: 400 });
+  if (productId && productId.length < 10) return NextResponse.json({ error: "Invalid product UUID" }, { status: 400 });
   try {
     return NextResponse.json({ anomalies: await new SupabaseStore().getAnomalies(productId) });
   } catch (error) {

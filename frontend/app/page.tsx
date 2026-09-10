@@ -40,7 +40,7 @@ export default function Home() {
 
         if (escrowsData.status === "fulfilled" && escrowsData.value.length > 0) {
           const totalWei = escrowsData.value.reduce((acc, e) => {
-            return acc + (e.status === "ACTIVE" ? BigInt(e.amount_wei || 0) : 0n);
+            return acc + (e.status === "LOCKED" ? BigInt(e.amount || 0) : 0n);
           }, 0n);
           if (totalWei > 0n) {
             const inEth = (Number(totalWei) / 1e18).toFixed(2);

@@ -12,8 +12,8 @@ export async function POST(request: Request, context: { params: Promise<{ reques
   try {
     const { requestId } = await context.params;
     const body = (await request.json()) as { productId?: string };
-    if (!body.productId || !/^\d+$/.test(body.productId)) {
-      return NextResponse.json({ error: "Valid productId is required" }, { status: 400 });
+    if (!body.productId) {
+      return NextResponse.json({ error: "Valid product UUID is required" }, { status: 400 });
     }
     const result = await resolveTelemetryAnomaly(
       body.productId,

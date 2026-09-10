@@ -1,0 +1,19 @@
+/**
+ * Consumer-scoped design tokens. Imported only by app/consumer/layout.tsx,
+ * so these rules never load outside consumer routes.
+ *
+ * Purely additive: --background, --foreground, --muted, --border,
+ * --surface, --surface-muted already exist in app/globals.css and are
+ * reused as-is for surfaces/text. Only status-semantic colors (not
+ * defined anywhere yet) are added here.
+ */
+:root {
+  --vc-success: #10b981;
+  --vc-success-soft: rgba(16, 185, 129, 0.12);
+  --vc-warning: #f59e0b;
+  --vc-warning-soft: rgba(245, 158, 11, 0.12);
+  --vc-danger: #ef4444;
+  --vc-danger-soft: rgba(239, 68, 68, 0.12);
+  --vc-info: #3b82f6;
+  --vc-info-soft: rgba(59, 130, 246, 0.12);
+}

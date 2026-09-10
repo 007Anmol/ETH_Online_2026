@@ -15,7 +15,7 @@ const BARE_PATHS = new Set(["/", "/login"]);
 export function AppShell({ session, children }: AppShellProps) {
   const pathname = usePathname();
 
-  if (BARE_PATHS.has(pathname)) {
+  if (BARE_PATHS.has(pathname) || pathname.startsWith("/consumer")) {
     return children;
   }
 

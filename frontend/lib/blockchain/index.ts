@@ -7,7 +7,9 @@ export { publicClient } from "./clients";
 export {
   CONTRACTS,
   getRegistryAddress,
+  hasEscrowAddress,
   hasRegistryAddress,
+  hasSupplyChainAddress,
   registryAbi,
 } from "./contracts";
 export {

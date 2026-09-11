@@ -15,12 +15,11 @@ import Sidebar from "@/components/team2/Sidebar";
 import Topbar from "@/components/team2/Topbar";
 import StatusBadge from "@/components/team2/StatusBadge";
 import { CONTRACTS } from "@/lib/contracts";
+import { deriveOnChainId } from "@/lib/blockchain";
 import { legacySupplyChainAbi } from "@/lib/team2/legacySupplyChainAbi";
 
 /** Team 2 supply-chain contract boundary (not Team 1 identity registry). */
-const supplyChainAddress =
-  (process.env.NEXT_PUBLIC_SUPPLY_CHAIN_ADDRESS as `0x${string}` | undefined) ??
-  CONTRACTS.escrow;
+const supplyChainAddress = CONTRACTS.supplyChain;
 import {
   createShipmentRecord,
   fetchShipments,
@@ -42,6 +41,7 @@ type ContractShipmentRecord = readonly [
 export default function ShipmentsPage() {
   const { address: userAddress, isConnected } = useAccount();
   const [productId, setProductId] = useState("1");
+  const [team1ProductCode, setTeam1ProductCode] = useState("VC-RADO2026001-000001");
   const [receiver, setReceiver] = useState("");
   const [message, setMessage] = useState("");
   const [dbShipments, setDbShipments] = useState<DbShipmentRecord[]>([]);
@@ -175,6 +175,35 @@ export default function ShipmentsPage() {
     );
   };
 
+  const registerLogisticsProduct = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setMessage("");
+
+    if (!isConnected || !userAddress) {
+      setMessage("Connect the supply-chain owner wallet first.");
+      return;
+    }
+    if (!supplyChainAddress || supplyChainAddress === "0x0000000000000000000000000000000000000000") {
+      setMessage("Set NEXT_PUBLIC_SUPPLY_CHAIN_ADDRESS after DeployTeam2.");
+      return;
+    }
+
+    const team1Hash = deriveOnChainId(team1ProductCode);
+    writeContract(
+      {
+        address: supplyChainAddress,
+        abi: legacySupplyChainAbi,
+        functionName: "registerLogisticsProduct",
+        args: [BigInt(productId), team1Hash, userAddress],
+      },
+      {
+        onSuccess: (hash) =>
+          setMessage(`Linked Team 1 ${team1ProductCode} → logistics #${productId}. Tx: ${hash.slice(0, 10)}...`),
+        onError: (error) => setMessage(error.message),
+      },
+    );
+  };
+
   return (
     <div className="min-h-screen bg-white text-black">
       <div className="flex">
@@ -201,11 +230,43 @@ export default function ShipmentsPage() {
             </div>
 
             <div className="mt-8 grid gap-6 lg:grid-cols-[360px_1fr]">
+              <form onSubmit={registerLogisticsProduct} className="rounded-xl border border-dashed border-gray-300 p-6 lg:col-span-2">
+                <h2 className="text-sm font-semibold">1) Link Team 1 product into Team 2 logistics</h2>
+                <p className="mt-1 text-xs text-gray-500">
+                  Requires a Team 1 product that already has an NFC tag bound. Owner wallet only.
+                </p>
+                <div className="mt-4 grid gap-4 sm:grid-cols-3">
+                  <label className="block text-[10px] uppercase tracking-wider text-gray-400">
+                    Logistics product id
+                    <input
+                      value={productId}
+                      onChange={(event) => setProductId(event.target.value)}
+                      className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-black"
+                      inputMode="numeric"
+                    />
+                  </label>
+                  <label className="block text-[10px] uppercase tracking-wider text-gray-400 sm:col-span-2">
+                    Team 1 product code
+                    <input
+                      value={team1ProductCode}
+                      onChange={(event) => setTeam1ProductCode(event.target.value)}
+                      className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-black"
+                    />
+                  </label>
+                </div>
+                <button
+                  disabled={isPending || isConfirming}
+                  className="mt-4 rounded-lg border border-gray-200 px-4 py-2 text-xs font-medium hover:border-black disabled:opacity-40"
+                >
+                  Register logistics product
+                </button>
+              </form>
+
               {/* Shipment Creation Form */}
               <form onSubmit={submitCreate} className="rounded-xl border border-gray-200 p-6">
                 <div className="flex items-center gap-2">
                   <Plus size={15} />
-                  <h2 className="text-sm font-semibold">Create shipment</h2>
+                  <h2 className="text-sm font-semibold">2) Create shipment</h2>
                 </div>
 
                 <label className="mt-6 block text-[10px] uppercase tracking-wider text-gray-400">Product ID</label>

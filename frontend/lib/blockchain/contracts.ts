@@ -9,15 +9,29 @@ export const registryAbi = registryAbiJson as Abi;
  * Do not treat missing escrow/hook addresses as a Team 1 configuration error.
  */
 export const CONTRACTS = {
+  /** Team 1 identity registry */
   registry: (process.env.NEXT_PUBLIC_REGISTRY_ADDRESS ??
     "0x0000000000000000000000000000000000000000") as Address,
-  /** @deprecated Team 2 boundary — not part of Team 1 identity. */
+  /** Team 2 logistics / custody / anomaly registry */
+  supplyChain: (process.env.NEXT_PUBLIC_SUPPLY_CHAIN_ADDRESS ??
+    "0x0000000000000000000000000000000000000000") as Address,
+  /** Team 2 escrow (reads getProductStatus from supply chain) */
   escrow: (process.env.NEXT_PUBLIC_ESCROW_ADDRESS ??
     "0x0000000000000000000000000000000000000000") as Address,
-  /** @deprecated Team 2 boundary — not part of Team 1 identity. */
+  /** Team 2 Uniswap v4 hook (optional for local dry-run) */
   hook: (process.env.NEXT_PUBLIC_HOOK_ADDRESS ??
     "0x0000000000000000000000000000000000000000") as Address,
 } as const;
+
+export function hasSupplyChainAddress(): boolean {
+  const address = CONTRACTS.supplyChain;
+  return Boolean(address && address !== "0x0000000000000000000000000000000000000000");
+}
+
+export function hasEscrowAddress(): boolean {
+  const address = CONTRACTS.escrow;
+  return Boolean(address && address !== "0x0000000000000000000000000000000000000000");
+}
 
 export function getRegistryAddress(): Address {
   const address = CONTRACTS.registry;

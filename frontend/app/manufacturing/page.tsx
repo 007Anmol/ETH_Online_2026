@@ -18,12 +18,29 @@ import {
   readTag,
 } from "@/lib/blockchain";
 import {
-  createBrowserSupabaseClient,
   hasBrowserSupabaseConfig,
-  walletHasPermission,
 } from "@/lib/supabase";
+import type { ManufacturerPermission } from "@/lib/blockchain/types";
 
 type Mode = "createBatch" | "mintBatch" | "bindTag" | "lookup";
+
+async function fetchWalletAccess(wallet: string, permission: ManufacturerPermission) {
+  const params = new URLSearchParams({ wallet, permission });
+  const res = await fetch(`/api/auth/wallet-access?${params.toString()}`, {
+    method: "GET",
+    cache: "no-store",
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(body.error || "Permission lookup failed");
+  }
+  return body as {
+    allowed: boolean;
+    reason?: string;
+    profile?: { role?: string } | null;
+    organization?: { name?: string } | null;
+  };
+}
 
 export default function ManufacturingPage() {
   const { address: connectedAddress, isConnected } = useAccount();
@@ -54,15 +71,14 @@ export default function ManufacturingPage() {
         if (!cancelled) {
           setCanWrite(false);
           setAuthMessage(
-            "Supabase public config missing. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.",
+            "Supabase env not loaded in the browser. Put NEXT_PUBLIC_SUPABASE_URL + NEXT_PUBLIC_SUPABASE_ANON_KEY in frontend/.env.local, then restart `npm run dev`.",
           );
         }
         return;
       }
 
       try {
-        const supabase = createBrowserSupabaseClient();
-        const permission =
+        const permission: ManufacturerPermission =
           mode === "createBatch"
             ? "CREATE_BATCH"
             : mode === "mintBatch"
@@ -70,9 +86,9 @@ export default function ManufacturingPage() {
               : mode === "bindTag"
                 ? "REGISTER_TAG"
                 : "VIEW_PROVENANCE";
-        const result = await walletHasPermission(supabase, connectedAddress, permission);
+        const result = await fetchWalletAccess(connectedAddress, permission);
         if (cancelled) return;
-        setCanWrite(result.allowed);
+        setCanWrite(Boolean(result.allowed));
         setAuthMessage(
           result.allowed
             ? `${result.organization?.name ?? "Organization"} · ${result.profile?.role}`

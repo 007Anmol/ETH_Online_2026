@@ -37,6 +37,11 @@ function address(name: string): Address {
 }
 
 async function resolveTokenId(productId: string): Promise<bigint> {
+  // Local / Team 2 dry-run: checkpoints already send numeric logistics product ids.
+  if (/^\d+$/.test(productId.trim())) {
+    return BigInt(productId.trim());
+  }
+
   const supabaseUrl = required("SUPABASE_URL").replace(/\/$/, "");
   const serviceKey = required("SUPABASE_SERVICE_ROLE_KEY");
   const response = await fetch(`${supabaseUrl}/rest/v1/products?select=token_id&id=eq.${encodeURIComponent(productId)}&limit=1`, {
@@ -61,7 +66,10 @@ export function createViemBlockchainGateway(): BlockchainGateway {
   const transport = http(required("HEDERA_RPC_URL"));
   const publicClient = createPublicClient({ chain: hedera, transport });
   const walletClient = createWalletClient({ account, chain: hedera, transport });
-  const registry = address("REGISTRY_ADDRESS");
+  // Team 2 logistics contract (fallback to REGISTRY_ADDRESS for older envs).
+  const registry = (process.env.SUPPLY_CHAIN_ADDRESS
+    ? address("SUPPLY_CHAIN_ADDRESS")
+    : address("REGISTRY_ADDRESS")) as Address;
   const escrow = address("ESCROW_ADDRESS");
 
   async function send(hash: Promise<Hash>): Promise<string> {
@@ -71,7 +79,7 @@ export function createViemBlockchainGateway(): BlockchainGateway {
   }
 
   return {
-    recordCheckpoint: async (point: TelemetryPoint) => send(walletClient.writeContract({ chain: hedera, address: registry, abi: registryAbi, functionName: "recordCheckpoint", args: [BigInt(point.productId), BigInt(point.timestamp), BigInt(Math.round(point.latitude * 1_000_000)), BigInt(Math.round(point.longitude * 1_000_000)), keccak256(stringToHex(point.checkpoint))] })),
+    recordCheckpoint: async (point: TelemetryPoint) => send(walletClient.writeContract({ chain: hedera, address: registry, abi: registryAbi, functionName: "recordCheckpoint", args: [await resolveTokenId(point.productId), BigInt(point.timestamp), BigInt(Math.round(point.latitude * 1_000_000)), BigInt(Math.round(point.longitude * 1_000_000)), keccak256(stringToHex(point.checkpoint))] })),
     recordAnomaly: async (productId, result) => send(walletClient.writeContract({ chain: hedera, address: registry, abi: registryAbi, functionName: "recordAnomaly", args: [await resolveTokenId(productId), BigInt(result.riskScore), keccak256(stringToHex(result.explanation))] })),
     freezeEscrowPool: async (productId) => send(walletClient.writeContract({ chain: hedera, address: escrow, abi: escrowAbi, functionName: "freezeEscrowPool", args: [await resolveTokenId(productId)] })),
     resolveAnomaly: async (productId) => send(walletClient.writeContract({ chain: hedera, address: registry, abi: registryAbi, functionName: "resolveAnomaly", args: [await resolveTokenId(productId)] })),

@@ -1,29 +1,34 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-function publicEnv(name: "NEXT_PUBLIC_SUPABASE_URL" | "NEXT_PUBLIC_SUPABASE_ANON_KEY"): string {
-  const value = process.env[name];
-  if (!value) {
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
+
+let browserClient: SupabaseClient | null = null;
+let serviceClient: SupabaseClient | null = null;
+
+/** Browser-safe Supabase client (anon key). Singleton — avoids GoTrue multi-instance warnings. */
+export function createBrowserSupabaseClient(): SupabaseClient {
+  if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error(
-      `Missing ${name}. Add it to frontend/.env.local (public browser config only).`,
+      "Missing NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY. Add them to frontend/.env.local and restart `npm run dev`.",
     );
   }
-  return value;
-}
 
-/** Browser-safe Supabase client (anon key). Never put the service role key here. */
-export function createBrowserSupabaseClient(): SupabaseClient {
-  return createClient(publicEnv("NEXT_PUBLIC_SUPABASE_URL"), publicEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY"), {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
+  if (!browserClient) {
+    browserClient = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        storageKey: "verichain-browser-auth",
+      },
+    });
+  }
+
+  return browserClient;
 }
 
 export function hasBrowserSupabaseConfig(): boolean {
-  return Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  );
+  return Boolean(supabaseUrl && supabaseAnonKey);
 }
 
 /**
@@ -38,12 +43,18 @@ export function createServiceSupabaseClient(): SupabaseClient {
       "Missing SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY. These are server-only — never expose the service role to the browser.",
     );
   }
-  return createClient(url, key, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
+
+  if (!serviceClient) {
+    serviceClient = createClient(url, key, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        storageKey: "verichain-service-auth",
+      },
+    });
+  }
+
+  return serviceClient;
 }
 
 export function hasServiceSupabaseConfig(): boolean {

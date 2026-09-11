@@ -1,7 +1,6 @@
 /**
- * Legacy Team 2 shipment/custody ABI surface.
- * These functions are NOT on Team 1 VeriChainRegistry.
- * Keep Team 2 UI compiling until a dedicated supply-chain contract address is plugged in.
+ * Team 2 supply-chain ABI (VeriChainSupplyChain).
+ * Identity remains on Team 1 VeriChainRegistry.
  */
 export const legacySupplyChainAbi = [
   {
@@ -24,6 +23,29 @@ export const legacySupplyChainAbi = [
     stateMutability: "view",
     inputs: [{ name: "productId", type: "uint256" }],
     outputs: [{ name: "", type: "uint8" }],
+  },
+  {
+    type: "function",
+    name: "products",
+    stateMutability: "view",
+    inputs: [{ name: "productId", type: "uint256" }],
+    outputs: [
+      { name: "team1ProductIdHash", type: "bytes32" },
+      { name: "currentCustodian", type: "address" },
+      { name: "status", type: "uint8" },
+      { name: "exists", type: "bool" },
+    ],
+  },
+  {
+    type: "function",
+    name: "registerLogisticsProduct",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "productId", type: "uint256" },
+      { name: "team1ProductIdHash", type: "bytes32" },
+      { name: "initialCustodian", type: "address" },
+    ],
+    outputs: [],
   },
   {
     type: "function",
@@ -63,6 +85,30 @@ export const legacySupplyChainAbi = [
     inputs: [
       { name: "productId", type: "uint256" },
       { name: "newCustodian", type: "address" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "recordCheckpoint",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "productId", type: "uint256" },
+      { name: "timestamp", type: "uint256" },
+      { name: "latitude", type: "int256" },
+      { name: "longitude", type: "int256" },
+      { name: "locationHash", type: "bytes32" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "recordAnomaly",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "productId", type: "uint256" },
+      { name: "riskScore", type: "uint256" },
+      { name: "reasonHash", type: "bytes32" },
     ],
     outputs: [],
   },

@@ -102,7 +102,7 @@ export default function VerificationPage() {
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm font-semibold">Registry Connection</h2>
                   <span className="text-[10px] uppercase tracking-wider text-gray-400">
-                    Anvil · 31337
+                    Hedera EVM · 296/295
                   </span>
                 </div>
 

@@ -4,14 +4,17 @@ import {
   http,
   keccak256,
   stringToHex,
+  defineChain,
   type Address,
   type Hash,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import type { AnomalyResult } from "../../../packages/shared/types/anomaly";
+import type { TelemetryPoint } from "../../../packages/shared/types/checkpoint";
 import type { BlockchainGateway } from "./blockchain";
 
 const registryAbi = [
+  { name: "recordCheckpoint", type: "function", stateMutability: "nonpayable", inputs: [{ name: "productId", type: "uint256" }, { name: "timestamp", type: "uint256" }, { name: "latitude", type: "int256" }, { name: "longitude", type: "int256" }, { name: "locationHash", type: "bytes32" }], outputs: [] },
   { name: "recordAnomaly", type: "function", stateMutability: "nonpayable", inputs: [{ name: "productId", type: "uint256" }, { name: "riskScore", type: "uint256" }, { name: "reasonHash", type: "bytes32" }], outputs: [] },
   { name: "resolveAnomaly", type: "function", stateMutability: "nonpayable", inputs: [{ name: "productId", type: "uint256" }], outputs: [] },
 ] as const;
@@ -48,10 +51,16 @@ async function resolveTokenId(productId: string): Promise<bigint> {
 }
 
 export function createViemBlockchainGateway(): BlockchainGateway {
-  const account = privateKeyToAccount(required("AGENT_PRIVATE_KEY") as `0x${string}`);
-  const transport = http(required("AGENT_RPC_URL"));
-  const publicClient = createPublicClient({ transport });
-  const walletClient = createWalletClient({ account, transport });
+  const hedera = defineChain({
+    id: Number(process.env.HEDERA_CHAIN_ID ?? "296"),
+    name: "Hedera",
+    nativeCurrency: { name: "HBAR", symbol: "HBAR", decimals: 18 },
+    rpcUrls: { default: { http: [required("HEDERA_RPC_URL")] } },
+  });
+  const account = privateKeyToAccount(required("HEDERA_AGENT_PRIVATE_KEY") as `0x${string}`);
+  const transport = http(required("HEDERA_RPC_URL"));
+  const publicClient = createPublicClient({ chain: hedera, transport });
+  const walletClient = createWalletClient({ account, chain: hedera, transport });
   const registry = address("REGISTRY_ADDRESS");
   const escrow = address("ESCROW_ADDRESS");
 
@@ -62,9 +71,10 @@ export function createViemBlockchainGateway(): BlockchainGateway {
   }
 
   return {
-    recordAnomaly: async (productId, result) => send(walletClient.writeContract({ chain: null, address: registry, abi: registryAbi, functionName: "recordAnomaly", args: [await resolveTokenId(productId), BigInt(result.riskScore), keccak256(stringToHex(result.explanation))] })),
-    freezeEscrowPool: async (productId) => send(walletClient.writeContract({ chain: null, address: escrow, abi: escrowAbi, functionName: "freezeEscrowPool", args: [await resolveTokenId(productId)] })),
-    resolveAnomaly: async (productId) => send(walletClient.writeContract({ chain: null, address: registry, abi: registryAbi, functionName: "resolveAnomaly", args: [await resolveTokenId(productId)] })),
+    recordCheckpoint: async (point: TelemetryPoint) => send(walletClient.writeContract({ chain: hedera, address: registry, abi: registryAbi, functionName: "recordCheckpoint", args: [BigInt(point.productId), BigInt(point.timestamp), BigInt(Math.round(point.latitude * 1_000_000)), BigInt(Math.round(point.longitude * 1_000_000)), keccak256(stringToHex(point.checkpoint))] })),
+    recordAnomaly: async (productId, result) => send(walletClient.writeContract({ chain: hedera, address: registry, abi: registryAbi, functionName: "recordAnomaly", args: [await resolveTokenId(productId), BigInt(result.riskScore), keccak256(stringToHex(result.explanation))] })),
+    freezeEscrowPool: async (productId) => send(walletClient.writeContract({ chain: hedera, address: escrow, abi: escrowAbi, functionName: "freezeEscrowPool", args: [await resolveTokenId(productId)] })),
+    resolveAnomaly: async (productId) => send(walletClient.writeContract({ chain: hedera, address: registry, abi: registryAbi, functionName: "resolveAnomaly", args: [await resolveTokenId(productId)] })),
     resolveEscrowPool: async (productId) => {
       const tokenId = await resolveTokenId(productId);
       const nextEscrowId = await publicClient.readContract({ address: escrow, abi: escrowAbi, functionName: "nextEscrowId" });
@@ -72,7 +82,7 @@ export function createViemBlockchainGateway(): BlockchainGateway {
       for (let escrowId = 1n; escrowId < nextEscrowId; escrowId++) {
         const record = await publicClient.readContract({ address: escrow, abi: escrowAbi, functionName: "escrows", args: [escrowId] });
         if (record[0] === tokenId && record[4] === 1) {
-          lastHash = await send(walletClient.writeContract({ chain: null, address: escrow, abi: escrowAbi, functionName: "resolveEscrow", args: [escrowId] }));
+          lastHash = await send(walletClient.writeContract({ chain: hedera, address: escrow, abi: escrowAbi, functionName: "resolveEscrow", args: [escrowId] }));
         }
       }
       return lastHash;

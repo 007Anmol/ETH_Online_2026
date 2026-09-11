@@ -150,6 +150,10 @@ contract VeriChainRegistry is Ownable {
             "Not current custodian"
         );
         require(receiver != address(0), "Invalid receiver");
+        require(
+            product.status != ProductStatus.IN_TRANSIT,
+            "Product already in shipment"
+        );
 
         shipmentId = nextShipmentId++;
 
@@ -190,6 +194,11 @@ contract VeriChainRegistry is Ownable {
         );
 
         Product storage product = products[shipment.productId];
+
+        require(
+            product.currentCustodian == shipment.sender,
+            "Shipment is no longer active"
+        );
 
         address previousCustodian = product.currentCustodian;
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import Link from "next/link";
 import { Check, ExternalLink, Plus, RefreshCw, Search, Truck } from "lucide-react";
 import { isAddress } from "viem";
 import {
@@ -103,7 +104,7 @@ export default function ShipmentsPage() {
     setMessage("");
 
     if (!isConnected) {
-      setMessage("Connect an Anvil wallet first.");
+      setMessage("Connect a Hedera wallet first.");
       return;
     }
 
@@ -128,6 +129,8 @@ export default function ShipmentsPage() {
               id: nextShipmentId.toString(),
               on_chain_shipment_id: nextShipmentId.toString(),
               product_id: productId,
+              sender_org_id: userAddress,
+              receiver_org_id: receiver,
               status: "CREATED",
               chain_tx_hash: hash,
             }).catch(() => {});
@@ -171,7 +174,7 @@ export default function ShipmentsPage() {
         <Sidebar />
         <div className="min-w-0 flex-1">
           <Topbar />
-          <main className="mx-auto max-w-[1400px] p-6 lg:p-10">
+          <main className="mx-auto max-w-350 p-6 lg:p-10">
             <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
               <div>
                 <p className="text-[10px] uppercase tracking-[0.2em] text-gray-400">Operations</p>
@@ -222,7 +225,7 @@ export default function ShipmentsPage() {
                   {isPending || isConfirming ? "Confirming..." : "Create shipment"}
                 </button>
 
-                {message && <p className="mt-4 break-words text-xs text-gray-500">{message}</p>}
+                {message && <p className="mt-4 wrap-break-word text-xs text-gray-500">{message}</p>}
               </form>
 
               {/* Latest On-chain Record */}
@@ -288,7 +291,11 @@ export default function ShipmentsPage() {
                     <tbody className="divide-y divide-gray-50">
                       {dbShipments.map((s) => (
                         <tr key={s.id} className="hover:bg-gray-50/60">
-                          <td className="py-3 font-semibold">#{s.id}</td>
+                          <td className="py-3 font-semibold">
+                            <Link className="underline underline-offset-2" href={`/shipments/${s.on_chain_shipment_id ?? s.id}`}>
+                              #{s.on_chain_shipment_id ?? s.id}
+                            </Link>
+                          </td>
                           <td className="py-3">#{s.product_id}</td>
                           <td className="py-3 font-mono text-[11px] text-gray-600">{s.sender_org_id?.slice(0, 10) ?? "—"}</td>
                           <td className="py-3 font-mono text-[11px] text-gray-600">{s.receiver_org_id?.slice(0, 10) ?? "—"}</td>

@@ -1,5 +1,6 @@
 import type { TelemetryBatch } from "../../../packages/shared/types/checkpoint";
 import { ingestCheckpoint } from "../../telemetry/src/checkpoint";
+import { enrichRiskWithGemini } from "./gemini";
 import type { AnomalyStore, StoredAnomaly } from "./anomaly";
 import type { BlockchainGateway } from "./blockchain";
 
@@ -9,6 +10,7 @@ export type AgentResult = {
 	productId: string;
 	riskScore: number;
 	shouldFreeze: boolean;
+	checkpointTxHash?: string;
 	anomalyTxHash?: string;
 	escrowTxHash?: string;
 };
@@ -29,33 +31,36 @@ export async function processTelemetry(
 	}
 
 	const ingestion = ingestCheckpoint(batch);
+	const analysis = await enrichRiskWithGemini(batch, ingestion.analysis);
+	const checkpointTxHash = await blockchain.recordCheckpoint(ingestion.checkpoint);
 	await store.saveCheckpoint({
 		requestId: ingestion.requestId,
 		point: ingestion.checkpoint,
-		riskScore: ingestion.analysis.riskScore,
+		riskScore: analysis.riskScore,
+		chainTxHash: checkpointTxHash,
 	});
 
-	if (!ingestion.analysis.shouldFreeze) {
+	if (!analysis.shouldFreeze) {
 		return {
 			duplicate: false,
 			requestId: ingestion.requestId,
 			productId: ingestion.analysis.productId,
-			riskScore: ingestion.analysis.riskScore,
+			riskScore: analysis.riskScore,
 			shouldFreeze: false,
 		};
 	}
 
 	const anomalyTxHash = await blockchain.recordAnomaly(
-		ingestion.analysis.productId,
-		ingestion.analysis,
+		analysis.productId,
+		analysis,
 	);
 	const escrowTxHash = await blockchain.freezeEscrowPool(
-		ingestion.analysis.productId,
+		analysis.productId,
 	);
 
 	const anomaly: StoredAnomaly = {
 		requestId: ingestion.requestId,
-		result: ingestion.analysis,
+		result: analysis,
 		status: "OPEN",
 		txHash: anomalyTxHash,
 	};
@@ -64,9 +69,10 @@ export async function processTelemetry(
 	return {
 		duplicate: false,
 		requestId: ingestion.requestId,
-		productId: ingestion.analysis.productId,
-		riskScore: ingestion.analysis.riskScore,
+		productId: analysis.productId,
+		riskScore: analysis.riskScore,
 		shouldFreeze: true,
+		checkpointTxHash,
 		anomalyTxHash,
 		escrowTxHash,
 	};

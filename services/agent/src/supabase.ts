@@ -64,6 +64,7 @@ export class SupabaseStore implements AnomalyStore, PaymentStore {
         checkpoint_type: checkpointType(checkpoint.point.checkpoint),
         recorded_at: new Date(checkpoint.point.timestamp * 1000).toISOString(),
         risk_score: checkpoint.riskScore,
+        tx_hash: checkpoint.chainTxHash ?? null,
         anomaly_decision: checkpoint.riskScore >= 61 ? "ANOMALY" : "NORMAL",
       }),
     });
@@ -240,9 +241,12 @@ function checkpointType(label: string): "FACTORY" | "DISTRIBUTOR" | "LOGISTICS_H
 
 async function databaseProductId(productId: string): Promise<string> {
   if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(productId)) return productId;
-  const rows = await supabaseRequest<Array<{ id: string }>>(
-    `products?select=id&token_id=eq.${encodeURIComponent(productId)}&limit=1`,
-  );
-  if (!rows[0]) throw new Error(`No product found for token_id ${productId}`);
-  return rows[0].id;
+  try {
+    const rows = await supabaseRequest<Array<{ id: string }>>(
+      `products?select=id&token_id=eq.${encodeURIComponent(productId)}&limit=1`,
+    );
+    return rows[0]?.id ?? productId;
+  } catch {
+    return productId;
+  }
 }

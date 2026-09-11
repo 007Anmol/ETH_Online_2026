@@ -2,20 +2,14 @@
 
 import { FormEvent, useState } from "react";
 import { AlertTriangle, MapPin, Radio } from "lucide-react";
-import { keccak256, toBytes } from "viem";
-import { useAccount, useWriteContract } from "wagmi";
 
 import Sidebar from "@/components/team2/Sidebar";
 import Topbar from "@/components/team2/Topbar";
 import StatusBadge from "@/components/team2/StatusBadge";
-import { CONTRACTS } from "@/lib/contracts";
-import { escrowAbi } from "@/lib/escrowAbi";
-import { registryAbi } from "@/lib/registryAbi";
 import type { RiskResult, TelemetryPoint } from "@/lib/risk";
 
 export default function CheckpointsPage() {
-  const { isConnected } = useAccount();
-  const { writeContract, isPending } = useWriteContract();
+  const [isPending, setIsPending] = useState(false);
   const [productId, setProductId] = useState("1");
   const [checkpoint, setCheckpoint] = useState("New York");
   const [latitude, setLatitude] = useState("40.7128");
@@ -47,13 +41,15 @@ export default function CheckpointsPage() {
       actualRoute: actualRoute.split(",").map((item) => item.trim()).filter(Boolean),
     };
 
+    setIsPending(true);
     const response = await fetch("/api/checkpoints", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ current, previous }),
     });
 
-    const analysis = (await response.json()) as RiskResult & { error?: string };
+    const analysis = (await response.json()) as RiskResult & { error?: string; checkpointTxHash?: string };
+    setIsPending(false);
     if (!response.ok) {
       setMessage(analysis.error ?? "Checkpoint analysis failed.");
       return;
@@ -61,65 +57,15 @@ export default function CheckpointsPage() {
 
     setResult(analysis);
 
-    if (!isConnected) {
-      setMessage("Analysis complete. Connect an Anvil wallet to record it on-chain.");
-      return;
-    }
-
-    writeContract(
-      {
-        address: CONTRACTS.registry,
-        abi: registryAbi,
-        functionName: "recordCheckpoint",
-        args: [
-          BigInt(productId),
-          BigInt(current.timestamp),
-          BigInt(Math.round(current.latitude * 1_000_000)),
-          BigInt(Math.round(current.longitude * 1_000_000)),
-          keccak256(toBytes(current.checkpoint)),
-        ],
-      },
-      {
-        onSuccess: () => setMessage("Checkpoint recorded on-chain."),
-        onError: (error) => setMessage(error.message),
-      },
-    );
-  };
-
-  const freezeEscrow = () => {
-    if (!result || result.riskScore < 61) return;
-
-    writeContract(
-      {
-        address: CONTRACTS.registry,
-        abi: registryAbi,
-        functionName: "recordAnomaly",
-        args: [BigInt(productId), BigInt(result.riskScore), keccak256(toBytes(result.explanation))],
-      },
-      {
-        onSuccess: () => {
-          writeContract(
-            {
-              address: CONTRACTS.escrow,
-              abi: escrowAbi,
-              functionName: "freezeEscrowPool",
-              args: [BigInt(productId)],
-            },
-            {
-              onSuccess: () => setMessage("Anomaly recorded and escrow pool frozen."),
-              onError: (error) => setMessage(error.message),
-            },
-          );
-        },
-        onError: (error) => setMessage(error.message),
-      },
-    );
+    setMessage(analysis.shouldFreeze
+      ? "Agent recorded the checkpoint, anomaly, and escrow freeze on Hedera."
+      : "Agent recorded the checkpoint on Hedera.");
   };
 
   return (
     <div className="min-h-screen bg-white text-black">
       <div className="flex"><Sidebar /><div className="min-w-0 flex-1"><Topbar />
-        <main className="mx-auto max-w-[1200px] p-6 lg:p-10">
+        <main className="mx-auto max-w-300 p-6 lg:p-10">
           <p className="text-[10px] uppercase tracking-[0.2em] text-gray-400">Telemetry</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight">Checkpoint analysis</h1>
           <p className="mt-2 text-sm text-gray-500">Run deterministic movement checks before anchoring a checkpoint.</p>
@@ -135,12 +81,12 @@ export default function CheckpointsPage() {
               <Field label="Observed route" value={actualRoute} setValue={setActualRoute} />
               <Field label="Previous checkpoint" value={previous.checkpoint} setValue={(value) => setPrevious({ ...previous, checkpoint: value })} />
               <button disabled={isPending} className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-black px-4 py-3 text-xs font-medium text-white disabled:opacity-40"><Radio size={14} /> Analyze and record</button>
-              {message && <p className="mt-4 break-words text-xs text-gray-500">{message}</p>}
+              {message && <p className="mt-4 wrap-break-word text-xs text-gray-500">{message}</p>}
             </form>
 
             <section className="rounded-xl border border-gray-200 p-6">
-              <div className="flex items-start justify-between"><div><p className="text-[10px] uppercase tracking-wider text-gray-400">Deterministic engine</p><h2 className="mt-2 text-xl font-semibold">Risk decision</h2></div>{result && <StatusBadge status={result.level} />}</div>
-              {!result ? <div className="mt-16 text-center text-sm text-gray-400">Submit telemetry to see the decision.</div> : <><div className="mt-8 flex items-end gap-3"><span className="text-5xl font-semibold">{result.riskScore}</span><span className="pb-2 text-xs text-gray-400">/ 100 risk score</span></div><p className="mt-5 text-sm leading-6 text-gray-600">{result.explanation}</p><div className="mt-6 space-y-3">{result.findings.map((finding) => <div key={finding} className="flex gap-3 rounded-lg border border-gray-200 p-3"><AlertTriangle size={15} className="mt-0.5 shrink-0" /><p className="text-xs text-gray-500">{finding}</p></div>)}</div>{result.riskScore >= 61 && <button onClick={freezeEscrow} disabled={isPending} className="mt-6 rounded-lg bg-black px-4 py-3 text-xs font-medium text-white disabled:opacity-40">Record anomaly + freeze escrow</button>}</>}
+              <div className="flex items-start justify-between"><div><p className="text-[10px] uppercase tracking-wider text-gray-400">AI agent decision</p><h2 className="mt-2 text-xl font-semibold">Risk decision</h2></div>{result && <StatusBadge status={result.level} />}</div>
+              {!result ? <div className="mt-16 text-center text-sm text-gray-400">Submit telemetry to see the decision.</div> : <><div className="mt-8 flex items-end gap-3"><span className="text-5xl font-semibold">{result.riskScore}</span><span className="pb-2 text-xs text-gray-400">/ 100 risk score</span></div><p className="mt-5 text-sm leading-6 text-gray-600">{result.explanation}</p><div className="mt-6 space-y-3">{result.findings.map((finding) => <div key={finding} className="flex gap-3 rounded-lg border border-gray-200 p-3"><AlertTriangle size={15} className="mt-0.5 shrink-0" /><p className="text-xs text-gray-500">{finding}</p></div>)}</div></>}
             </section>
           </div>
         </main>

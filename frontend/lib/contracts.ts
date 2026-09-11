@@ -1,5 +1,5 @@
 export const CONTRACTS = {
-  registry: "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707",
-  escrow: "0x0165878A594ca255338adfa4d48449f69242Eb8F",
-  hook: "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853",
+  registry: process.env.NEXT_PUBLIC_REGISTRY_ADDRESS as `0x${string}`,
+  escrow: process.env.NEXT_PUBLIC_ESCROW_ADDRESS as `0x${string}`,
+  hook: process.env.NEXT_PUBLIC_HOOK_ADDRESS as `0x${string}`,
 } as const;

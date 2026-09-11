@@ -15,9 +15,19 @@ contract Deploy is Script {
             address(registry)
         );
 
+        registry.registerProduct(
+            1,
+            1001,
+            bytes32("DEMO-BATCH-001"),
+            bytes32("DEMO-SERIAL-001"),
+            bytes32("DEMO-TAG-001"),
+            msg.sender
+        );
+
         vm.stopBroadcast();
 
         console2.log("Registry:", address(registry));
         console2.log("Escrow:", address(escrow));
+        console2.log("Seeded product: 1");
     }
 }

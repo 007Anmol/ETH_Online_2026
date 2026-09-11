@@ -5,6 +5,7 @@ export type StoredCheckpoint = {
 	requestId: string;
 	point: TelemetryPoint;
 	riskScore: number;
+	chainTxHash?: string;
 };
 
 export type StoredAnomaly = {

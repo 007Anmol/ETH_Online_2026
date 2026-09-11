@@ -124,6 +124,23 @@ contract VeriChainRegistryTest is Test {
         );
     }
 
+    function testReceiverCanCreateNextShipmentAfterAccepting() public {
+        vm.prank(manufacturer);
+        uint256 firstShipmentId = registry.createShipment(productId, distributor);
+
+        vm.prank(distributor);
+        registry.acceptShipment(firstShipmentId);
+
+        vm.prank(distributor);
+        uint256 secondShipmentId = registry.createShipment(productId, retailer);
+
+        assertEq(secondShipmentId, firstShipmentId + 1);
+        (, , address sender, address receiver, , bool exists) = registry.shipments(secondShipmentId);
+        assertEq(sender, distributor);
+        assertEq(receiver, retailer);
+        assertTrue(exists);
+    }
+
     function testTransferCustody() public {
         vm.prank(manufacturer);
 

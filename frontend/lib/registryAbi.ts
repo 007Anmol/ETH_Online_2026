@@ -30,6 +30,20 @@ export const registryAbi = [
   },
   {
     type: "function",
+    name: "registerProduct",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "productId", type: "uint256" },
+      { name: "tokenId", type: "uint256" },
+      { name: "batchId", type: "bytes32" },
+      { name: "serialNumber", type: "bytes32" },
+      { name: "tagId", type: "bytes32" },
+      { name: "initialCustodian", type: "address" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function",
     name: "nextShipmentId",
     stateMutability: "view",
     inputs: [],

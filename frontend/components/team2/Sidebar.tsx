@@ -6,6 +6,7 @@ import {
   AlertTriangle,
   Box,
   CircleDollarSign,
+  Factory,
   LayoutDashboard,
   ScanLine,
   ShieldCheck,
@@ -22,6 +23,11 @@ const navigation = [
     label: "Shipments",
     href: "/shipments",
     icon: Truck,
+  },
+  {
+    label: "Manufacturing",
+    href: "/manufacturing",
+    icon: Factory,
   },
   {
     label: "Checkpoints",

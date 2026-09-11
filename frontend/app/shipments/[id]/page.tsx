@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -17,18 +18,86 @@ import Topbar from "@/components/team2/Topbar";
 import StatusBadge from "@/components/team2/StatusBadge";
 import Timeline from "@/components/team2/Timeline";
 import {
-  checkpoints,
-  custodyTransfers,
-  shipments,
-} from "@/lib/mockData";
+  fetchCheckpoints,
+  fetchCustodyTransfers,
+  fetchShipments,
+  type CheckpointRecord,
+  type CustodyRecord,
+  type ShipmentRecord,
+} from "@/lib/supabase";
+
+type DetailShipment = ShipmentRecord & {
+  shipmentId: string;
+  manufacturer: string;
+  distributor: string;
+  product: string;
+  origin: string;
+  destination: string;
+  verification: string;
+  escrow: string;
+  payment: string;
+  value: string;
+};
 
 export default function ShipmentDetails({
   params,
 }: {
   params: { id: string };
 }) {
-  const shipment =
-    shipments.find((item) => item.id === params.id) ?? shipments[0];
+  const [shipment, setShipment] = useState<DetailShipment | null>(null);
+  const [checkpoints, setCheckpoints] = useState<CheckpointRecord[]>([]);
+  const [custodyTransfers, setCustodyTransfers] = useState<CustodyRecord[]>([]);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const records = await fetchShipments();
+        const record = records.find(
+          (item) => String(item.on_chain_shipment_id ?? item.id) === params.id,
+        );
+
+        if (!record) {
+          setError(`Shipment ${params.id} was not found in Supabase.`);
+          return;
+        }
+
+        const [checkpointRows, custodyRows] = await Promise.all([
+          fetchCheckpoints(record.product_id),
+          fetchCustodyTransfers(record.product_id),
+        ]);
+
+        setShipment({
+          ...record,
+          shipmentId: String(record.on_chain_shipment_id ?? record.id),
+          manufacturer: record.sender_org_id ?? "Unknown sender",
+          distributor: record.receiver_org_id ?? "Unknown receiver",
+          product: `Product #${record.product_id}`,
+          origin: "On-chain sender wallet",
+          destination: "On-chain receiver wallet",
+          verification: checkpointRows.some((row) => row.anomaly_decision === "ANOMALY") ? "FLAGGED" : "VERIFIED",
+          escrow: "NOT LINKED",
+          payment: "PENDING",
+          value: "Demo shipment",
+        });
+        setCheckpoints(checkpointRows);
+        setCustodyTransfers(custodyRows);
+      } catch (loadError) {
+        setError(loadError instanceof Error ? loadError.message : "Unable to load shipment.");
+      }
+    };
+
+    void load();
+  }, [params.id]);
+
+  if (!shipment) {
+    return (
+      <div className="min-h-screen bg-white p-8 text-black">
+        <Link href="/shipments" className="text-sm underline underline-offset-4">Back to shipments</Link>
+        <p className="mt-8 text-sm text-gray-500">{error || "Loading shipment..."}</p>
+      </div>
+    );
+  }
 
   const timeline = [
     {
@@ -71,7 +140,7 @@ export default function ShipmentDetails({
         <div className="min-w-0 flex-1">
           <Topbar />
 
-          <main className="mx-auto max-w-[1400px] p-6 lg:p-10">
+          <main className="mx-auto max-w-350 p-6 lg:p-10">
             <Link
               href="/shipments"
               className="mb-6 inline-flex items-center gap-2 text-xs text-gray-500 hover:text-black"
@@ -88,7 +157,7 @@ export default function ShipmentDetails({
                 </p>
 
                 <h1 className="mt-2 text-3xl font-semibold tracking-tight">
-                  {shipment.id}
+                  #{shipment.shipmentId}
                 </h1>
 
                 <p className="mt-2 text-sm text-gray-500">
@@ -234,7 +303,7 @@ export default function ShipmentDetails({
               <div className="divide-y divide-gray-100">
                 {checkpoints.map((checkpoint) => (
                   <div
-                    key={checkpoint.location}
+                    key={checkpoint.id ?? `${checkpoint.product_id}-${checkpoint.recorded_at}`}
                     className="flex flex-col justify-between gap-3 px-6 py-4 sm:flex-row sm:items-center"
                   >
                     <div className="flex items-center gap-3">
@@ -242,21 +311,21 @@ export default function ShipmentDetails({
 
                       <div>
                         <p className="text-xs font-medium">
-                          {checkpoint.location}
+                          {checkpoint.checkpoint_type}
                         </p>
 
                         <p className="mt-1 text-[10px] uppercase tracking-wider text-gray-400">
-                          {checkpoint.type}
+                          {checkpoint.anomaly_decision ?? "RECORDED"}
                         </p>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-4">
                       <span className="text-[10px] text-gray-400">
-                        {checkpoint.time}
+                        {new Date(checkpoint.recorded_at).toLocaleString()}
                       </span>
 
-                      <StatusBadge status={checkpoint.status} />
+                      <StatusBadge status={checkpoint.anomaly_decision ?? "RECORDED"} />
                     </div>
                   </div>
                 ))}
@@ -278,22 +347,22 @@ export default function ShipmentDetails({
               <div className="divide-y divide-gray-100">
                 {custodyTransfers.map((transfer) => (
                   <div
-                    key={`${transfer.from}-${transfer.to}`}
+                    key={transfer.id ?? `${transfer.from_org_id}-${transfer.to_org_id}`}
                     className="flex flex-col justify-between gap-3 px-6 py-4 sm:flex-row sm:items-center"
                   >
                     <div>
                       <p className="text-xs font-medium">
-                        {transfer.from}
+                        {transfer.from_org_id ?? "Unknown"}
                         <span className="mx-2 text-gray-300">→</span>
-                        {transfer.to}
+                        {transfer.to_org_id ?? "Unknown"}
                       </p>
 
                       <p className="mt-1 text-[10px] text-gray-400">
-                        {transfer.time}
+                        {transfer.transferred_at ? new Date(transfer.transferred_at).toLocaleString() : "Recorded"}
                       </p>
                     </div>
 
-                    {transfer.verified && (
+                    {transfer.chain_tx_hash && (
                       <div className="flex items-center gap-1.5 text-[10px] font-medium">
                         <CheckCircle2 size={13} />
                         Verified

@@ -74,7 +74,7 @@ export default function EscrowPage() {
 
   const create = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!isConnected) return setMessage("Connect an Anvil wallet first.");
+    if (!isConnected) return setMessage("Connect a Hedera wallet first.");
     if (!isAddress(payee)) return setMessage("Enter a valid payee address.");
 
     writeContract(
@@ -93,7 +93,7 @@ export default function EscrowPage() {
               id: (nextEscrowId ?? 1n).toString(),
               product_id: productId,
               amount: parseEther(amount).toString(),
-              currency: "ETH",
+              currency: "HBAR",
               status: "LOCKED",
               chain_tx_hash: hash,
             })
@@ -137,13 +137,13 @@ export default function EscrowPage() {
         <Sidebar />
         <div className="min-w-0 flex-1">
           <Topbar />
-          <main className="mx-auto max-w-[1400px] p-6 lg:p-10">
+          <main className="mx-auto max-w-350 p-6 lg:p-10">
             <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
               <div>
                 <p className="text-[10px] uppercase tracking-[0.2em] text-gray-400">Settlement</p>
                 <h1 className="mt-2 text-3xl font-semibold tracking-tight">Programmable Escrow</h1>
-                <p className="mt-2 text-sm text-gray-500">
-                  Live escrow pool controlled by smart contract state and enforced by Uniswap v4 Hook.
+                  <p className="mt-2 text-sm text-gray-500">
+                    HBAR escrow controlled by Hedera EVM state and gated by the Uniswap v4 Hook.
                 </p>
               </div>
               <div className="flex items-center gap-3">
@@ -167,14 +167,14 @@ export default function EscrowPage() {
                 </div>
                 <Field label="Product ID" value={productId} setValue={setProductId} />
                 <Field label="Payee wallet" value={payee} setValue={setPayee} />
-                <Field label="Amount in ETH" value={amount} setValue={setAmount} />
+                <Field label="Amount in HBAR" value={amount} setValue={setAmount} />
                 <button
                   disabled={isPending}
                   className="mt-5 w-full rounded-lg bg-black px-4 py-3 text-xs font-medium text-white disabled:opacity-40"
                 >
                   Fund escrow
                 </button>
-                {message && <p className="mt-4 break-words text-xs text-gray-500">{message}</p>}
+                {message && <p className="mt-4 wrap-break-word text-xs text-gray-500">{message}</p>}
               </form>
 
               {/* Latest Escrow & Hook Enforcement Card */}

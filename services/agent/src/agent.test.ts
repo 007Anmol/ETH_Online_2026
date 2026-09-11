@@ -29,6 +29,11 @@ class MemoryAnomalyStore implements AnomalyStore {
 class MemoryBlockchain implements BlockchainGateway {
 	calls: string[] = [];
 
+	async recordCheckpoint() {
+		this.calls.push("recordCheckpoint");
+		return "0xcheckpoint";
+	}
+
 	async recordAnomaly() {
 		this.calls.push("recordAnomaly");
 		return "0xanomaly";
@@ -92,7 +97,7 @@ describe("agent acceptance flow", () => {
 			anomalyTxHash: "0xanomaly",
 			escrowTxHash: "0xfrozen",
 		});
-		expect(blockchain.calls).toEqual(["recordAnomaly", "freezeEscrowPool"]);
+		expect(blockchain.calls).toEqual(["recordCheckpoint", "recordAnomaly", "freezeEscrowPool"]);
 		expect(store.checkpoints).toHaveLength(1);
 		expect(store.anomalies[0]?.status).toBe("OPEN");
 	});
@@ -105,7 +110,7 @@ describe("agent acceptance flow", () => {
 		const duplicate = await processTelemetry(batch, store, blockchain);
 
 		expect(duplicate.duplicate).toBe(true);
-		expect(blockchain.calls).toEqual(["recordAnomaly", "freezeEscrowPool"]);
+		expect(blockchain.calls).toEqual(["recordCheckpoint", "recordAnomaly", "freezeEscrowPool"]);
 	});
 
 	it("resolves the anomaly and escrow, then updates persistence", async () => {

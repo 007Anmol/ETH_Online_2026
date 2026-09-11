@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
-import { evaluateTelemetry, type TelemetryPoint } from "@/lib/risk";
+import type { TelemetryPoint } from "@/lib/risk";
 import { SupabaseStore } from "../../../../services/agent/src/supabase";
+import { processTelemetry } from "../../../../services/agent/src/agent";
+import { createViemBlockchainGateway } from "../../../../services/agent/src/viemBlockchain";
 
 type CheckpointRequest = {
   current: TelemetryPoint;
@@ -39,26 +41,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid previous checkpoint" }, { status: 400 });
   }
 
-  const result = evaluateTelemetry(body.current, body.previous, body.recent);
   const requestId = body.requestId ?? crypto.randomUUID();
 
   try {
     const store = new SupabaseStore();
-    if (await store.hasProcessed(requestId)) {
-      return NextResponse.json({ error: "Checkpoint request already processed" }, { status: 409 });
-    }
-    await store.saveCheckpoint({ requestId, point: body.current, riskScore: result.riskScore });
-    if (result.shouldFreeze) {
-      await store.saveAnomaly({ requestId, result, status: "OPEN" });
-    }
+    const result = await processTelemetry(
+      { requestId, current: body.current, previous: body.previous, recent: body.recent },
+      store,
+      createViemBlockchainGateway(),
+    );
+    return NextResponse.json({ checkpoint: body.current.checkpoint, ...result });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Persistence failed" }, { status: 503 });
+    const message = error instanceof Error ? error.message : "Agent processing failed";
+    return NextResponse.json({ error: message }, { status: message.includes("already") ? 409 : 503 });
   }
-
-  return NextResponse.json({
-    requestId,
-    checkpoint: body.current.checkpoint,
-    ...result,
-    action: result.riskScore >= 61 ? "RECORD_AND_FREEZE" : "RECORD_ONLY",
-  });
 }

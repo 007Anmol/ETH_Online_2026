@@ -15,7 +15,12 @@ import Sidebar from "@/components/team2/Sidebar";
 import Topbar from "@/components/team2/Topbar";
 import StatusBadge from "@/components/team2/StatusBadge";
 import { CONTRACTS } from "@/lib/contracts";
-import { registryAbi } from "@/lib/registryAbi";
+import { legacySupplyChainAbi } from "@/lib/team2/legacySupplyChainAbi";
+
+/** Team 2 supply-chain contract boundary (not Team 1 identity registry). */
+const supplyChainAddress =
+  (process.env.NEXT_PUBLIC_SUPPLY_CHAIN_ADDRESS as `0x${string}` | undefined) ??
+  CONTRACTS.escrow;
 import {
   createShipmentRecord,
   fetchShipments,
@@ -43,17 +48,19 @@ export default function ShipmentsPage() {
   const [isLoadingDb, setIsLoadingDb] = useState(false);
 
   const { data: nextShipmentId } = useReadContract({
-    address: CONTRACTS.registry,
-    abi: registryAbi,
+    address: supplyChainAddress,
+    abi: legacySupplyChainAbi,
     functionName: "nextShipmentId",
+    query: { enabled: Boolean(supplyChainAddress) },
   });
   const shipmentId = nextShipmentId && nextShipmentId > 1n ? nextShipmentId - 1n : 1n;
 
   const { data: shipment, refetch } = useReadContract({
-    address: CONTRACTS.registry,
-    abi: registryAbi,
+    address: supplyChainAddress,
+    abi: legacySupplyChainAbi,
     functionName: "shipments",
     args: [shipmentId],
+    query: { enabled: Boolean(supplyChainAddress) },
   });
 
   const { writeContract, data: transactionHash, isPending } = useWriteContract();
@@ -115,8 +122,8 @@ export default function ShipmentsPage() {
 
     writeContract(
       {
-        address: CONTRACTS.registry,
-        abi: registryAbi,
+        address: supplyChainAddress,
+        abi: legacySupplyChainAbi,
         functionName: "createShipment",
         args: [BigInt(productId), receiver],
       },
@@ -146,8 +153,8 @@ export default function ShipmentsPage() {
 
     writeContract(
       {
-        address: CONTRACTS.registry,
-        abi: registryAbi,
+        address: supplyChainAddress,
+        abi: legacySupplyChainAbi,
         functionName: "acceptShipment",
         args: [record[0]],
       },

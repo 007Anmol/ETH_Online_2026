@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   CheckCircle2,
   Cpu,
@@ -8,48 +9,64 @@ import {
   ScanLine,
   ShieldCheck,
 } from "lucide-react";
-import { useReadContract } from "wagmi";
 
 import Sidebar from "@/components/team2/Sidebar";
 import Topbar from "@/components/team2/Topbar";
-import { CONTRACTS } from "@/lib/contracts";
-import { registryAbi } from "@/lib/registryAbi";
-
-const productStatusLabels = [
-  "CREATED",
-  "IN_TRANSIT",
-  "DELIVERED",
-  "SUSPECT_COUNTERFEIT",
-  "RESOLVED",
-] as const;
+import {
+  deriveOnChainId,
+  hasRegistryAddress,
+  normalizeTagUid,
+  readProduct,
+  readRegistryOwner,
+  readTag,
+  type OnChainProduct,
+  type OnChainTag,
+} from "@/lib/blockchain";
 
 export default function VerificationPage() {
-  const { data: registryOwner, isError: registryReadFailed } =
-    useReadContract({
-      address: CONTRACTS.registry,
-      abi: registryAbi,
-      functionName: "owner",
-    });
+  const [productCode, setProductCode] = useState("VC-RADO2026001-000001");
+  const [tagUid, setTagUid] = useState("04DEADBEEF01");
+  const [owner, setOwner] = useState<string>("");
+  const [product, setProduct] = useState<OnChainProduct | null>(null);
+  const [tag, setTag] = useState<OnChainTag | null>(null);
+  const [error, setError] = useState("");
 
-  const { data: productStatus } = useReadContract({
-    address: CONTRACTS.registry,
-    abi: registryAbi,
-    functionName: "getProductStatus",
-    args: [1n],
-  });
+  useEffect(() => {
+    let cancelled = false;
 
-  const statusIndex =
-    typeof productStatus === "bigint"
-      ? Number(productStatus)
-      : productStatus;
+    async function load() {
+      if (!hasRegistryAddress()) {
+        if (!cancelled) setError("NEXT_PUBLIC_REGISTRY_ADDRESS is not configured.");
+        return;
+      }
+      try {
+        const [registryOwner, onChainProduct, onChainTag] = await Promise.all([
+          readRegistryOwner(),
+          readProduct(deriveOnChainId(productCode)),
+          readTag(deriveOnChainId(normalizeTagUid(tagUid))),
+        ]);
+        if (cancelled) return;
+        setOwner(registryOwner);
+        setProduct(onChainProduct);
+        setTag(onChainTag);
+        setError("");
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Registry read failed");
+        }
+      }
+    }
 
-  const statusLabel =
-    typeof statusIndex === "number" &&
-    Number.isInteger(statusIndex) &&
-    statusIndex >= 0 &&
-    statusIndex < productStatusLabels.length
-      ? productStatusLabels[statusIndex]
-      : "UNAVAILABLE";
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [productCode, tagUid]);
+
+  const bound =
+    product?.exists &&
+    tag?.exists &&
+    product.boundTagIdHash.toLowerCase() === deriveOnChainId(normalizeTagUid(tagUid)).toLowerCase();
 
   return (
     <div className="min-h-screen bg-white text-black">
@@ -61,99 +78,78 @@ export default function VerificationPage() {
 
           <main className="mx-auto max-w-[1100px] p-6 lg:p-10">
             <div>
-              <p className="text-[10px] uppercase tracking-[0.2em] text-gray-400">
-                Agent
-              </p>
-
-              <h1 className="mt-2 text-3xl font-semibold tracking-tight">
-                Product Verification
-              </h1>
-
+              <p className="text-[10px] uppercase tracking-[0.2em] text-gray-400">Agent</p>
+              <h1 className="mt-2 text-3xl font-semibold tracking-tight">Product Verification</h1>
               <p className="mt-2 text-sm text-gray-500">
-                Analyze NFC data and verify product authenticity before
-                releasing settlement.
+                Read Team 1 product/tag binding from VeriChainRegistry. NFC cryptographic verify and
+                consumeNonce remain owner/backend flows.
               </p>
             </div>
 
             <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_360px]">
               <section className="rounded-xl border border-gray-200 p-8">
-                <div className="flex min-h-[360px] flex-col items-center justify-center text-center">
-                  <div className="flex h-24 w-24 items-center justify-center rounded-full border border-gray-200">
-                    <Radio size={36} strokeWidth={1.5} />
-                  </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block text-[10px] uppercase tracking-wider text-gray-400">
+                    Product code
+                    <input
+                      value={productCode}
+                      onChange={(event) => setProductCode(event.target.value)}
+                      className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm normal-case tracking-normal text-black outline-none focus:border-black"
+                    />
+                  </label>
+                  <label className="block text-[10px] uppercase tracking-wider text-gray-400">
+                    Tag UID
+                    <input
+                      value={tagUid}
+                      onChange={(event) => setTagUid(event.target.value)}
+                      className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm normal-case tracking-normal text-black outline-none focus:border-black"
+                    />
+                  </label>
+                </div>
 
-                  <h2 className="mt-6 text-lg font-semibold">
-                    NFC Ready
+                <div className="mt-8 flex min-h-[240px] flex-col items-center justify-center text-center">
+                  <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full border border-gray-200">
+                    <ScanLine className="text-gray-400" size={32} />
+                  </div>
+                  <h2 className="text-xl font-semibold tracking-tight">
+                    {bound ? "Product ↔ tag bound" : "Binding not confirmed"}
                   </h2>
-
-                  <p className="mt-2 max-w-sm text-xs leading-5 text-gray-400">
-                    Bring the NFC-enabled product close to the verification
-                    device to begin authenticity analysis.
-                  </p>
-
-                  <button className="mt-6 flex items-center gap-2 rounded-lg bg-black px-5 py-3 text-xs font-medium text-white">
-                    <ScanLine size={14} />
-                    Scan NFC
-                  </button>
-                </div>
-              </section>
-
-              <section className="rounded-xl border border-gray-200 p-5">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-sm font-semibold">Registry Connection</h2>
-                  <span className="text-[10px] uppercase tracking-wider text-gray-400">
-                    Hedera EVM · 296/295
-                  </span>
-                </div>
-
-                <div className="mt-5 space-y-4 text-xs">
-                  <div className="flex items-center justify-between gap-4">
-                    <span className="text-gray-500">Registry owner</span>
-                    <span className="max-w-[190px] truncate font-mono text-[10px]">
-                      {registryReadFailed ? "Read failed" : registryOwner ?? "Loading..."}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-4">
-                    <span className="text-gray-500">Product #1 status</span>
-                    <span className="font-medium">{statusLabel}</span>
-                  </div>
-                </div>
-              </section>
-
-              <section className="rounded-xl border border-gray-200">
-                <div className="border-b border-gray-200 p-5">
-                  <h2 className="text-sm font-semibold">
-                    Verification Engine
-                  </h2>
-
-                  <p className="mt-1 text-xs text-gray-400">
-                    Agent analysis pipeline
+                  <p className="mt-2 max-w-sm text-sm text-gray-500">
+                    {error ||
+                      (bound
+                        ? "On-chain Team 1 identity matches the entered product and tag."
+                        : "Enter a minted product code and bound tag UID to verify identity.")}
                   </p>
                 </div>
-
-                <div className="divide-y divide-gray-100">
-                  <Check
-                    icon={<Fingerprint size={15} />}
-                    label="NFC Identity"
-                  />
-
-                  <Check
-                    icon={<Cpu size={15} />}
-                    label="Product Metadata"
-                  />
-
-                  <Check
-                    icon={<ShieldCheck size={15} />}
-                    label="Registry Match"
-                  />
-
-                  <Check
-                    icon={<CheckCircle2 size={15} />}
-                    label="Anomaly Analysis"
-                  />
-                </div>
               </section>
+
+              <aside className="space-y-4">
+                <InfoCard
+                  icon={<ShieldCheck size={16} />}
+                  title="Registry owner"
+                  body={owner || "Unavailable"}
+                />
+                <InfoCard
+                  icon={<Fingerprint size={16} />}
+                  title="Product exists"
+                  body={product ? String(product.exists) : "—"}
+                />
+                <InfoCard
+                  icon={<Radio size={16} />}
+                  title="Tag status"
+                  body={tag ? String(tag.status) : "—"}
+                />
+                <InfoCard
+                  icon={<Cpu size={16} />}
+                  title="Bound"
+                  body={bound ? "YES" : "NO"}
+                />
+                <InfoCard
+                  icon={<CheckCircle2 size={16} />}
+                  title="consumeNonce"
+                  body="Owner-only backend action — not callable by logistics wallets"
+                />
+              </aside>
             </div>
           </main>
         </div>
@@ -162,21 +158,22 @@ export default function VerificationPage() {
   );
 }
 
-function Check({
+function InfoCard({
   icon,
-  label,
+  title,
+  body,
 }: {
   icon: React.ReactNode;
-  label: string;
+  title: string;
+  body: string;
 }) {
   return (
-    <div className="flex items-center justify-between px-5 py-4">
-      <div className="flex items-center gap-3 text-xs text-gray-600">
+    <div className="rounded-xl border border-gray-200 p-4">
+      <div className="flex items-center gap-2 text-gray-500">
         {icon}
-        {label}
+        <p className="text-[10px] uppercase tracking-[0.15em]">{title}</p>
       </div>
-
-      <span className="text-[10px] text-gray-400">READY</span>
+      <p className="mt-2 break-all text-sm text-black">{body}</p>
     </div>
   );
 }

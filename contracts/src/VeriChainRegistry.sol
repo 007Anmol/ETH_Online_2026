@@ -1,346 +1,243 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.24;
 
-import "./Ownable.sol";
-
-contract VeriChainRegistry is Ownable {
-    enum ProductStatus {
-        CREATED,
-        IN_TRANSIT,
-        DELIVERED,
-        SUSPECT_COUNTERFEIT,
-        RESOLVED
+/// @title VeriChainRegistry
+/// @notice Team 1 identity. Ids are keccak256 hashes computed off-chain from
+///         batch_code, product_code, tag_uid, and tag_uid:nonce.
+/// @dev Names, plant, and category stay off-chain. Do not write identity here
+///      onto VeriChainHook or VeriChainEscrow.
+contract VeriChainRegistry {
+    enum BatchStatus {
+        Created,
+        Minted
     }
 
-    enum ShipmentStatus {
-        CREATED,
-        IN_TRANSIT,
-        RECEIVED,
-        CANCELLED
+    enum TagStatus {
+        Unset,
+        Bound,
+        Revoked
+    }
+
+    struct Batch {
+        bool exists;
+        uint32 quantity;
+        uint32 mintedCount;
+        BatchStatus status;
     }
 
     struct Product {
-        uint256 tokenId;
-        bytes32 batchId;
-        bytes32 serialNumber;
-        bytes32 tagId;
-        address currentCustodian;
-        ProductStatus status;
         bool exists;
+        bytes32 batchIdHash;
+        bytes32 boundTagIdHash;
     }
 
-    struct Shipment {
-        uint256 shipmentId;
-        uint256 productId;
-        address sender;
-        address receiver;
-        ShipmentStatus status;
+    struct Tag {
         bool exists;
+        TagStatus status;
+        bytes32 productIdHash;
     }
 
-    struct Checkpoint {
-        uint256 timestamp;
-        int256 latitude;
-        int256 longitude;
-        bytes32 locationHash;
-        address recordedBy;
+    error Unauthorized();
+    error InvalidQuantity();
+    error InvalidId();
+    error BatchAlreadyExists(bytes32 batchIdHash);
+    error BatchNotFound(bytes32 batchIdHash);
+    error OverMint(bytes32 batchIdHash, uint32 remaining);
+    error ProductAlreadyMinted(bytes32 productIdHash);
+    error ProductNotFound(bytes32 productIdHash);
+    error ProductAlreadyBound(bytes32 productIdHash);
+    error TagAlreadyBound(bytes32 tagIdHash);
+    error TagIsRevoked(bytes32 tagIdHash);
+    error TagNotBound(bytes32 tagIdHash);
+    error NonceAlreadyConsumed(bytes32 nonceHash);
+
+    event BatchCreated(bytes32 indexed batchIdHash, uint32 quantity);
+    event BatchMinted(
+        bytes32 indexed batchIdHash,
+        uint32 added,
+        uint32 mintedCount
+    );
+    event TagBound(bytes32 indexed productIdHash, bytes32 indexed tagIdHash);
+    event TagRevoked(bytes32 indexed productIdHash, bytes32 indexed tagIdHash);
+    event NonceConsumed(bytes32 indexed tagIdHash, bytes32 indexed nonceHash);
+
+    address public owner;
+
+    mapping(bytes32 batchIdHash => Batch) private batches;
+    mapping(bytes32 productIdHash => Product) private products;
+    mapping(bytes32 tagIdHash => Tag) private tags;
+    mapping(bytes32 nonceHash => bool) private consumedNonces;
+
+    modifier onlyOwner() {
+        if (msg.sender != owner) revert Unauthorized();
+        _;
     }
 
-    struct Anomaly {
-        uint256 riskScore;
-        bytes32 reasonHash;
-        uint256 timestamp;
-        bool resolved;
+    constructor() {
+        owner = msg.sender;
     }
 
-    uint256 public nextShipmentId = 1;
-
-    mapping(uint256 => Product) public products;
-    mapping(uint256 => Shipment) public shipments;
-
-    mapping(uint256 => Checkpoint[]) private productCheckpoints;
-    mapping(uint256 => Anomaly[]) private productAnomalies;
-
-    event ProductRegistered(
-        uint256 indexed productId,
-        uint256 indexed tokenId,
-        bytes32 indexed batchId,
-        bytes32 serialNumber,
-        bytes32 tagId
-    );
-
-    event ShipmentCreated(
-        uint256 indexed shipmentId,
-        uint256 indexed productId,
-        address indexed sender,
-        address receiver
-    );
-
-    event CustodyTransferred(
-        uint256 indexed productId,
-        address indexed from,
-        address indexed to
-    );
-
-    event ShipmentReceived(
-        uint256 indexed shipmentId,
-        uint256 indexed productId,
-        address indexed receiver
-    );
-
-    event CheckpointRecorded(
-        uint256 indexed productId,
-        uint256 timestamp,
-        int256 latitude,
-        int256 longitude,
-        bytes32 locationHash
-    );
-
-    event AnomalyDetected(
-        uint256 indexed productId,
-        uint256 riskScore,
-        bytes32 reasonHash
-    );
-
-    event AnomalyResolved(
-        uint256 indexed productId
-    );
-
-    constructor() Ownable(msg.sender) {}
-
-    function registerProduct(
-        uint256 productId,
-        uint256 tokenId,
-        bytes32 batchId,
-        bytes32 serialNumber,
-        bytes32 tagId,
-        address initialCustodian
+    function createBatch(
+        bytes32 batchIdHash,
+        uint32 quantity
     ) external onlyOwner {
-        require(!products[productId].exists, "Product already exists");
-        require(initialCustodian != address(0), "Invalid custodian");
-
-        products[productId] = Product({
-            tokenId: tokenId,
-            batchId: batchId,
-            serialNumber: serialNumber,
-            tagId: tagId,
-            currentCustodian: initialCustodian,
-            status: ProductStatus.CREATED,
-            exists: true
-        });
-
-        emit ProductRegistered(
-            productId,
-            tokenId,
-            batchId,
-            serialNumber,
-            tagId
-        );
-    }
-
-    function createShipment(
-        uint256 productId,
-        address receiver
-    ) external returns (uint256 shipmentId) {
-        Product storage product = products[productId];
-
-        require(product.exists, "Product does not exist");
-        require(
-            msg.sender == product.currentCustodian,
-            "Not current custodian"
-        );
-        require(receiver != address(0), "Invalid receiver");
-        require(
-            product.status != ProductStatus.IN_TRANSIT,
-            "Product already in shipment"
-        );
-
-        shipmentId = nextShipmentId++;
-
-        shipments[shipmentId] = Shipment({
-            shipmentId: shipmentId,
-            productId: productId,
-            sender: msg.sender,
-            receiver: receiver,
-            status: ShipmentStatus.CREATED,
-            exists: true
-        });
-
-        product.status = ProductStatus.IN_TRANSIT;
-
-        emit ShipmentCreated(
-            shipmentId,
-            productId,
-            msg.sender,
-            receiver
-        );
-    }
-
-    function acceptShipment(
-        uint256 shipmentId
-    ) external {
-        Shipment storage shipment = shipments[shipmentId];
-
-        require(shipment.exists, "Shipment does not exist");
-        require(
-            msg.sender == shipment.receiver,
-            "Not shipment receiver"
-        );
-
-        require(
-            shipment.status == ShipmentStatus.CREATED ||
-            shipment.status == ShipmentStatus.IN_TRANSIT,
-            "Invalid shipment state"
-        );
-
-        Product storage product = products[shipment.productId];
-
-        require(
-            product.currentCustodian == shipment.sender,
-            "Shipment is no longer active"
-        );
-
-        address previousCustodian = product.currentCustodian;
-
-        product.currentCustodian = msg.sender;
-        product.status = ProductStatus.DELIVERED;
-
-        shipment.status = ShipmentStatus.RECEIVED;
-
-        emit CustodyTransferred(
-            shipment.productId,
-            previousCustodian,
-            msg.sender
-        );
-
-        emit ShipmentReceived(
-            shipmentId,
-            shipment.productId,
-            msg.sender
-        );
-    }
-
-    function transferCustody(
-        uint256 productId,
-        address newCustodian
-    ) external {
-        Product storage product = products[productId];
-
-        require(product.exists, "Product does not exist");
-        require(
-            msg.sender == product.currentCustodian,
-            "Not current custodian"
-        );
-        require(newCustodian != address(0), "Invalid custodian");
-
-        address previousCustodian = product.currentCustodian;
-
-        product.currentCustodian = newCustodian;
-
-        emit CustodyTransferred(
-            productId,
-            previousCustodian,
-            newCustodian
-        );
-    }
-
-    function recordCheckpoint(
-        uint256 productId,
-        uint256 timestamp,
-        int256 latitude,
-        int256 longitude,
-        bytes32 locationHash
-    ) external {
-        require(
-            products[productId].exists,
-            "Product does not exist"
-        );
-
-        productCheckpoints[productId].push(
-            Checkpoint({
-                timestamp: timestamp,
-                latitude: latitude,
-                longitude: longitude,
-                locationHash: locationHash,
-                recordedBy: msg.sender
-            })
-        );
-
-        emit CheckpointRecorded(
-            productId,
-            timestamp,
-            latitude,
-            longitude,
-            locationHash
-        );
-    }
-
-    function recordAnomaly(
-        uint256 productId,
-        uint256 riskScore,
-        bytes32 reasonHash
-    ) external onlyOwner {
-        require(
-            products[productId].exists,
-            "Product does not exist"
-        );
-        require(riskScore <= 100, "Invalid risk score");
-
-        productAnomalies[productId].push(
-            Anomaly({
-                riskScore: riskScore,
-                reasonHash: reasonHash,
-                timestamp: block.timestamp,
-                resolved: false
-            })
-        );
-
-        products[productId].status =
-            ProductStatus.SUSPECT_COUNTERFEIT;
-
-        emit AnomalyDetected(
-            productId,
-            riskScore,
-            reasonHash
-        );
-    }
-
-    function resolveAnomaly(
-        uint256 productId
-    ) external onlyOwner {
-        Product storage product = products[productId];
-
-        require(
-            product.exists,
-            "Product does not exist"
-        );
-
-        product.status = ProductStatus.RESOLVED;
-
-        if (productAnomalies[productId].length > 0) {
-            productAnomalies[productId][
-                productAnomalies[productId].length - 1
-            ].resolved = true;
+        if (batchIdHash == bytes32(0)) revert InvalidId();
+        if (quantity == 0) revert InvalidQuantity();
+        if (batches[batchIdHash].exists) {
+            revert BatchAlreadyExists(batchIdHash);
         }
 
-        emit AnomalyResolved(productId);
+        batches[batchIdHash] = Batch({
+            exists: true,
+            quantity: quantity,
+            mintedCount: 0,
+            status: BatchStatus.Created
+        });
+
+        emit BatchCreated(batchIdHash, quantity);
     }
 
-    function getProductStatus(
-        uint256 productId
-    ) external view returns (uint8) {
-        return uint8(products[productId].status);
+    function mintBatch(
+        bytes32 batchIdHash,
+        bytes32[] calldata productIdHashes
+    ) external onlyOwner {
+        Batch storage batch = batches[batchIdHash];
+        if (!batch.exists) revert BatchNotFound(batchIdHash);
+
+        uint256 added = productIdHashes.length;
+        if (added == 0) revert InvalidQuantity();
+
+        uint32 remaining = batch.quantity - batch.mintedCount;
+        if (added > remaining) {
+            revert OverMint(batchIdHash, remaining);
+        }
+
+        for (uint256 i = 0; i < added; ++i) {
+            bytes32 productIdHash = productIdHashes[i];
+            if (productIdHash == bytes32(0)) revert InvalidId();
+            if (products[productIdHash].exists) {
+                revert ProductAlreadyMinted(productIdHash);
+            }
+            products[productIdHash] = Product({
+                exists: true,
+                batchIdHash: batchIdHash,
+                boundTagIdHash: bytes32(0)
+            });
+        }
+
+        batch.mintedCount += uint32(added);
+        if (batch.mintedCount == batch.quantity) {
+            batch.status = BatchStatus.Minted;
+        }
+
+        emit BatchMinted(batchIdHash, uint32(added), batch.mintedCount);
     }
 
-    function getCheckpoints(
-        uint256 productId
-    ) external view returns (Checkpoint[] memory) {
-        return productCheckpoints[productId];
+    function bindTag(
+        bytes32 productIdHash,
+        bytes32 tagIdHash
+    ) external onlyOwner {
+        if (productIdHash == bytes32(0) || tagIdHash == bytes32(0)) {
+            revert InvalidId();
+        }
+
+        Product storage product = products[productIdHash];
+        if (!product.exists) revert ProductNotFound(productIdHash);
+        if (product.boundTagIdHash != bytes32(0)) {
+            revert ProductAlreadyBound(productIdHash);
+        }
+
+        Tag storage tag = tags[tagIdHash];
+        if (tag.exists) {
+            if (tag.status == TagStatus.Bound) revert TagAlreadyBound(tagIdHash);
+            if (tag.status == TagStatus.Revoked) revert TagIsRevoked(tagIdHash);
+        }
+
+        product.boundTagIdHash = tagIdHash;
+        tags[tagIdHash] = Tag({
+            exists: true,
+            status: TagStatus.Bound,
+            productIdHash: productIdHash
+        });
+
+        emit TagBound(productIdHash, tagIdHash);
     }
 
-    function getAnomalies(
-        uint256 productId
-    ) external view returns (Anomaly[] memory) {
-        return productAnomalies[productId];
+    function revokeTag(bytes32 tagIdHash) external onlyOwner {
+        if (tagIdHash == bytes32(0)) revert InvalidId();
+
+        Tag storage tag = tags[tagIdHash];
+        if (!tag.exists || tag.status != TagStatus.Bound) {
+            revert TagNotBound(tagIdHash);
+        }
+
+        bytes32 productIdHash = tag.productIdHash;
+        products[productIdHash].boundTagIdHash = bytes32(0);
+        tag.status = TagStatus.Revoked;
+        tag.productIdHash = bytes32(0);
+
+        emit TagRevoked(productIdHash, tagIdHash);
+    }
+
+    function consumeNonce(
+        bytes32 tagIdHash,
+        bytes32 nonceHash
+    ) external onlyOwner {
+        if (tagIdHash == bytes32(0) || nonceHash == bytes32(0)) {
+            revert InvalidId();
+        }
+
+        Tag storage tag = tags[tagIdHash];
+        if (!tag.exists || tag.status != TagStatus.Bound) {
+            revert TagNotBound(tagIdHash);
+        }
+        if (consumedNonces[nonceHash]) {
+            revert NonceAlreadyConsumed(nonceHash);
+        }
+
+        consumedNonces[nonceHash] = true;
+        emit NonceConsumed(tagIdHash, nonceHash);
+    }
+
+    function getBatch(
+        bytes32 batchIdHash
+    )
+        external
+        view
+        returns (
+            bool exists,
+            uint32 quantity,
+            uint32 mintedCount,
+            BatchStatus status
+        )
+    {
+        Batch storage batch = batches[batchIdHash];
+        return (batch.exists, batch.quantity, batch.mintedCount, batch.status);
+    }
+
+    function getProduct(
+        bytes32 productIdHash
+    )
+        external
+        view
+        returns (bool exists, bytes32 batchIdHash, bytes32 boundTagIdHash)
+    {
+        Product storage product = products[productIdHash];
+        return (product.exists, product.batchIdHash, product.boundTagIdHash);
+    }
+
+    function getTag(
+        bytes32 tagIdHash
+    )
+        external
+        view
+        returns (bool exists, TagStatus status, bytes32 productIdHash)
+    {
+        Tag storage tag = tags[tagIdHash];
+        return (tag.exists, tag.status, tag.productIdHash);
+    }
+
+    function isNonceConsumed(bytes32 nonceHash) external view returns (bool) {
+        return consumedNonces[nonceHash];
     }
 }

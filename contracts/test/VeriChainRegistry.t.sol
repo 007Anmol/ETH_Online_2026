@@ -1,263 +1,143 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.24;
 
-import "forge-std/Test.sol";
-import "../src/VeriChainRegistry.sol";
+import {Test} from "forge-std/Test.sol";
+import {VeriChainRegistry} from "../src/VeriChainRegistry.sol";
 
 contract VeriChainRegistryTest is Test {
-    VeriChainRegistry registry;
+    VeriChainRegistry internal registry;
 
-    address manufacturer = address(1);
-    address distributor = address(2);
-    address logistics = address(3);
-    address retailer = address(4);
-
-    uint256 productId = 1;
-    uint256 tokenId = 1001;
-
-    bytes32 batchId = bytes32("BATCH-001");
-    bytes32 serialNumber = bytes32("SERIAL-001");
-    bytes32 tagId = bytes32("TAG-001");
+    bytes32 internal batchId;
+    bytes32 internal productA;
+    bytes32 internal productB;
+    bytes32 internal productC;
+    bytes32 internal tagA;
+    bytes32 internal tagB;
+    bytes32 internal nonceHash;
 
     function setUp() public {
         registry = new VeriChainRegistry();
-
-        vm.prank(registry.owner());
-
-        registry.registerProduct(
-            productId,
-            tokenId,
-            batchId,
-            serialNumber,
-            tagId,
-            manufacturer
-        );
+        batchId = keccak256(bytes("RADO-2026-001"));
+        productA = keccak256(bytes("VC-RADO2026001-000001"));
+        productB = keccak256(bytes("VC-RADO2026001-000002"));
+        productC = keccak256(bytes("VC-RADO2026001-000003"));
+        tagA = keccak256(bytes("04DEADBEEF01"));
+        tagB = keccak256(bytes("04CAFEBABE02"));
+        nonceHash = keccak256(bytes("04DEADBEEF01:nonce-1"));
     }
 
-    function testProductRegistration() public {
-        (
-            uint256 storedTokenId,
-            bytes32 storedBatchId,
-            bytes32 storedSerialNumber,
-            bytes32 storedTagId,
-            address currentCustodian,
-            VeriChainRegistry.ProductStatus status,
-            bool exists
-        ) = registry.products(productId);
+    function _createAndMintTwo() internal {
+        registry.createBatch(batchId, 2);
+        bytes32[] memory ids = new bytes32[](2);
+        ids[0] = productA;
+        ids[1] = productB;
+        registry.mintBatch(batchId, ids);
+    }
 
-        assertEq(storedTokenId, tokenId);
-        assertEq(storedBatchId, batchId);
-        assertEq(storedSerialNumber, serialNumber);
-        assertEq(storedTagId, tagId);
-        assertEq(currentCustodian, manufacturer);
-        assertEq(uint8(status), 0);
+    function test_createBatch_storesQuantity() public {
+        registry.createBatch(batchId, 3);
+        (bool exists, uint32 quantity, uint32 mintedCount, VeriChainRegistry.BatchStatus status) =
+            registry.getBatch(batchId);
         assertTrue(exists);
+        assertEq(quantity, 3);
+        assertEq(mintedCount, 0);
+        assertEq(uint8(status), uint8(VeriChainRegistry.BatchStatus.Created));
     }
 
-    function testCreateShipment() public {
-        vm.prank(manufacturer);
-
-        uint256 shipmentId =
-            registry.createShipment(productId, distributor);
-
-        (
-            uint256 storedShipmentId,
-            uint256 storedProductId,
-            address sender,
-            address receiver,
-            VeriChainRegistry.ShipmentStatus shipmentStatus,
-            bool shipmentExists
-        ) = registry.shipments(shipmentId);
-
-        assertEq(storedShipmentId, shipmentId);
-        assertEq(storedProductId, productId);
-        assertEq(sender, manufacturer);
-        assertEq(receiver, distributor);
-        assertEq(uint8(shipmentStatus), 0);
-        assertTrue(shipmentExists);
-
-        assertEq(
-            uint8(registry.getProductStatus(productId)),
-            1
+    function test_createBatch_duplicateReverts() public {
+        registry.createBatch(batchId, 3);
+        vm.expectRevert(
+            abi.encodeWithSelector(VeriChainRegistry.BatchAlreadyExists.selector, batchId)
         );
+        registry.createBatch(batchId, 3);
     }
 
-    function testAcceptShipment() public {
-        vm.prank(manufacturer);
-
-        uint256 shipmentId =
-            registry.createShipment(productId, distributor);
-
-        vm.prank(distributor);
-
-        registry.acceptShipment(shipmentId);
-
-        (
-            uint256 storedTokenId,
-            bytes32 storedBatchId,
-            bytes32 storedSerialNumber,
-            bytes32 storedTagId,
-            address currentCustodian,
-            VeriChainRegistry.ProductStatus productStatus,
-            bool productExists
-        ) = registry.products(productId);
-
-        assertEq(currentCustodian, distributor);
-
-        assertEq(
-            uint8(productStatus),
-            uint8(VeriChainRegistry.ProductStatus.DELIVERED)
-        );
-
-        (
-            uint256 storedShipmentId,
-            uint256 storedProductId,
-            address sender,
-            address receiver,
-            VeriChainRegistry.ShipmentStatus shipmentStatus,
-            bool shipmentExists
-        ) = registry.shipments(shipmentId);
-
-        assertEq(
-            uint8(shipmentStatus),
-            uint8(VeriChainRegistry.ShipmentStatus.RECEIVED)
-        );
+    function test_mintBatch_overMintReverts() public {
+        registry.createBatch(batchId, 2);
+        bytes32[] memory tooMany = new bytes32[](3);
+        tooMany[0] = productA;
+        tooMany[1] = productB;
+        tooMany[2] = productC;
+        vm.expectRevert(abi.encodeWithSelector(VeriChainRegistry.OverMint.selector, batchId, uint32(2)));
+        registry.mintBatch(batchId, tooMany);
     }
 
-    function testReceiverCanCreateNextShipmentAfterAccepting() public {
-        vm.prank(manufacturer);
-        uint256 firstShipmentId = registry.createShipment(productId, distributor);
+    function test_mintBatch_secondWaveOverMintReverts() public {
+        _createAndMintTwo();
+        bytes32[] memory extra = new bytes32[](1);
+        extra[0] = productC;
+        vm.expectRevert(abi.encodeWithSelector(VeriChainRegistry.OverMint.selector, batchId, uint32(0)));
+        registry.mintBatch(batchId, extra);
+    }
 
-        vm.prank(distributor);
-        registry.acceptShipment(firstShipmentId);
-
-        vm.prank(distributor);
-        uint256 secondShipmentId = registry.createShipment(productId, retailer);
-
-        assertEq(secondShipmentId, firstShipmentId + 1);
-        (, , address sender, address receiver, , bool exists) = registry.shipments(secondShipmentId);
-        assertEq(sender, distributor);
-        assertEq(receiver, retailer);
+    function test_mintBatch_marksMintedWhenFull() public {
+        _createAndMintTwo();
+        (bool exists, uint32 quantity, uint32 mintedCount, VeriChainRegistry.BatchStatus status) =
+            registry.getBatch(batchId);
         assertTrue(exists);
+        assertEq(quantity, 2);
+        assertEq(mintedCount, 2);
+        assertEq(uint8(status), uint8(VeriChainRegistry.BatchStatus.Minted));
+
+        (bool productExists, bytes32 productBatch,) = registry.getProduct(productA);
+        assertTrue(productExists);
+        assertEq(productBatch, batchId);
     }
 
-    function testTransferCustody() public {
-        vm.prank(manufacturer);
-
-        registry.transferCustody(
-            productId,
-            distributor
-        );
-
-        (
-            uint256 storedTokenId,
-            bytes32 storedBatchId,
-            bytes32 storedSerialNumber,
-            bytes32 storedTagId,
-            address currentCustodian,
-            VeriChainRegistry.ProductStatus status,
-            bool exists
-        ) = registry.products(productId);
-
-        assertEq(currentCustodian, distributor);
+    function test_bindTag_secondBindOfSameTagReverts() public {
+        _createAndMintTwo();
+        registry.bindTag(productA, tagA);
+        vm.expectRevert(abi.encodeWithSelector(VeriChainRegistry.TagAlreadyBound.selector, tagA));
+        registry.bindTag(productB, tagA);
     }
 
-    function testRecordCheckpoint() public {
-        registry.recordCheckpoint(
-            productId,
-            1000,
-            190760,
-            728778,
-            keccak256("Mumbai")
+    function test_bindTag_secondTagOnSameProductReverts() public {
+        _createAndMintTwo();
+        registry.bindTag(productA, tagA);
+        vm.expectRevert(
+            abi.encodeWithSelector(VeriChainRegistry.ProductAlreadyBound.selector, productA)
         );
-
-        VeriChainRegistry.Checkpoint[] memory checkpoints =
-            registry.getCheckpoints(productId);
-
-        assertEq(checkpoints.length, 1);
-        assertEq(checkpoints[0].timestamp, 1000);
-        assertEq(checkpoints[0].latitude, 190760);
-        assertEq(checkpoints[0].longitude, 728778);
-        assertEq(
-            checkpoints[0].locationHash,
-            keccak256("Mumbai")
-        );
+        registry.bindTag(productA, tagB);
     }
 
-    function testRecordAnomaly() public {
-        bytes32 reasonHash =
-            keccak256("Impossible velocity");
-
-        vm.prank(registry.owner());
-
-        registry.recordAnomaly(
-            productId,
-            98,
-            reasonHash
-        );
-
-        assertEq(
-            uint8(registry.getProductStatus(productId)),
-            uint8(VeriChainRegistry.ProductStatus.SUSPECT_COUNTERFEIT)
-        );
-
-        VeriChainRegistry.Anomaly[] memory anomalies =
-            registry.getAnomalies(productId);
-
-        assertEq(anomalies.length, 1);
-        assertEq(anomalies[0].riskScore, 98);
-        assertEq(anomalies[0].reasonHash, reasonHash);
-        assertFalse(anomalies[0].resolved);
+    function test_bindTag_storesPair() public {
+        _createAndMintTwo();
+        registry.bindTag(productA, tagA);
+        (, , bytes32 boundTag) = registry.getProduct(productA);
+        (bool tagExists, VeriChainRegistry.TagStatus status, bytes32 boundProduct) =
+            registry.getTag(tagA);
+        assertEq(boundTag, tagA);
+        assertTrue(tagExists);
+        assertEq(uint8(status), uint8(VeriChainRegistry.TagStatus.Bound));
+        assertEq(boundProduct, productA);
     }
 
-    function testResolveAnomaly() public {
-        vm.startPrank(registry.owner());
-
-        registry.recordAnomaly(
-            productId,
-            98,
-            keccak256("Route deviation")
+    function test_consumeNonce_replayReverts() public {
+        _createAndMintTwo();
+        registry.bindTag(productA, tagA);
+        registry.consumeNonce(tagA, nonceHash);
+        assertTrue(registry.isNonceConsumed(nonceHash));
+        vm.expectRevert(
+            abi.encodeWithSelector(VeriChainRegistry.NonceAlreadyConsumed.selector, nonceHash)
         );
-
-        registry.resolveAnomaly(productId);
-
-        vm.stopPrank();
-
-        assertEq(
-            uint8(registry.getProductStatus(productId)),
-            uint8(VeriChainRegistry.ProductStatus.RESOLVED)
-        );
-
-        VeriChainRegistry.Anomaly[] memory anomalies =
-            registry.getAnomalies(productId);
-
-        assertTrue(anomalies[0].resolved);
+        registry.consumeNonce(tagA, nonceHash);
     }
 
-    function testOnlyOwnerCanRegisterProduct() public {
-        vm.prank(distributor);
+    function test_revokeTag_freesProductAndBlocksTagReuse() public {
+        _createAndMintTwo();
+        registry.bindTag(productA, tagA);
+        registry.revokeTag(tagA);
 
-        vm.expectRevert();
+        (, VeriChainRegistry.TagStatus status,) = registry.getTag(tagA);
+        assertEq(uint8(status), uint8(VeriChainRegistry.TagStatus.Revoked));
+        (, , bytes32 boundTag) = registry.getProduct(productA);
+        assertEq(boundTag, bytes32(0));
 
-        registry.registerProduct(
-            2,
-            1002,
-            bytes32("BATCH-002"),
-            bytes32("SERIAL-002"),
-            bytes32("TAG-002"),
-            distributor
-        );
-    }
+        vm.expectRevert(abi.encodeWithSelector(VeriChainRegistry.TagIsRevoked.selector, tagA));
+        registry.bindTag(productB, tagA);
 
-    function testOnlyOwnerCanRecordAnomaly() public {
-        vm.prank(distributor);
-
-        vm.expectRevert();
-
-        registry.recordAnomaly(
-            productId,
-            90,
-            keccak256("Test anomaly")
-        );
+        registry.bindTag(productA, tagB);
+        (, , bytes32 replacement) = registry.getProduct(productA);
+        assertEq(replacement, tagB);
     }
 }

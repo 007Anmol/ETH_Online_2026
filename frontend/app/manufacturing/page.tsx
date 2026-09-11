@@ -1,61 +1,182 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { Factory } from "lucide-react";
-import { isAddress, stringToHex } from "viem";
-import { useAccount, useWriteContract } from "wagmi";
+import { useAccount, useWalletClient } from "wagmi";
 
 import Sidebar from "@/components/team2/Sidebar";
 import Topbar from "@/components/team2/Topbar";
-import { CONTRACTS } from "@/lib/contracts";
-import { registryAbi } from "@/lib/registryAbi";
+import {
+  bindTagOnChain,
+  createBatchOnChain,
+  deriveOnChainId,
+  hasRegistryAddress,
+  mintBatchOnChain,
+  readBatch,
+  readProduct,
+  readRegistryOwner,
+  readTag,
+} from "@/lib/blockchain";
+import {
+  createBrowserSupabaseClient,
+  hasBrowserSupabaseConfig,
+  walletHasPermission,
+} from "@/lib/supabase";
+
+type Mode = "createBatch" | "mintBatch" | "bindTag" | "lookup";
 
 export default function ManufacturingPage() {
   const { address: connectedAddress, isConnected } = useAccount();
-  const { writeContract, isPending } = useWriteContract();
-  const [productId, setProductId] = useState("");
-  const [tokenId, setTokenId] = useState("");
-  const [batchId, setBatchId] = useState("");
-  const [serialNumber, setSerialNumber] = useState("");
-  const [tagId, setTagId] = useState("");
-  const [custodian, setCustodian] = useState("");
+  const { data: walletClient } = useWalletClient();
+  const [mode, setMode] = useState<Mode>("createBatch");
+  const [batchCode, setBatchCode] = useState("RADO-2026-001");
+  const [quantity, setQuantity] = useState("1");
+  const [productCodes, setProductCodes] = useState("VC-RADO2026001-000001");
+  const [productCode, setProductCode] = useState("VC-RADO2026001-000001");
+  const [tagUid, setTagUid] = useState("04DEADBEEF01");
   const [message, setMessage] = useState("");
+  const [authMessage, setAuthMessage] = useState("");
+  const [canWrite, setCanWrite] = useState(false);
 
-  const submit = (event: FormEvent<HTMLFormElement>) => {
+  useEffect(() => {
+    let cancelled = false;
+
+    async function checkAccess() {
+      if (!connectedAddress) {
+        if (!cancelled) {
+          setCanWrite(false);
+          setAuthMessage("Connect a wallet mapped to a manufacturer profile.");
+        }
+        return;
+      }
+
+      if (!hasBrowserSupabaseConfig()) {
+        if (!cancelled) {
+          setCanWrite(false);
+          setAuthMessage(
+            "Supabase public config missing. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.",
+          );
+        }
+        return;
+      }
+
+      try {
+        const supabase = createBrowserSupabaseClient();
+        const permission =
+          mode === "createBatch"
+            ? "CREATE_BATCH"
+            : mode === "mintBatch"
+              ? "MINT_PRODUCT"
+              : mode === "bindTag"
+                ? "REGISTER_TAG"
+                : "VIEW_PROVENANCE";
+        const result = await walletHasPermission(supabase, connectedAddress, permission);
+        if (cancelled) return;
+        setCanWrite(result.allowed);
+        setAuthMessage(
+          result.allowed
+            ? `${result.organization?.name ?? "Organization"} · ${result.profile?.role}`
+            : result.reason ?? "Not authorized",
+        );
+      } catch (error) {
+        if (!cancelled) {
+          setCanWrite(false);
+          setAuthMessage(error instanceof Error ? error.message : "Authorization lookup failed");
+        }
+      }
+    }
+
+    void checkAccess();
+    return () => {
+      cancelled = true;
+    };
+  }, [connectedAddress, mode]);
+
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setMessage("");
 
-    if (!isConnected || !connectedAddress) {
-      setMessage("Connect the owner wallet first.");
+    if (!isConnected || !connectedAddress || !walletClient) {
+      setMessage("Connect the Team 1 registry owner wallet first.");
       return;
     }
-    if (!isAddress(custodian)) {
-      setMessage("Enter a valid initial custodian address.");
+    if (!hasRegistryAddress()) {
+      setMessage("Set NEXT_PUBLIC_REGISTRY_ADDRESS to the deployed Team 1 registry.");
+      return;
+    }
+    if (!canWrite && mode !== "lookup") {
+      setMessage(authMessage || "Database role/permission check failed.");
       return;
     }
 
     try {
-      writeContract(
-        {
-          address: CONTRACTS.registry,
-          abi: registryAbi,
-          functionName: "registerProduct",
-          args: [
-            BigInt(productId),
-            BigInt(tokenId),
-            stringToHex(batchId, { size: 32 }),
-            stringToHex(serialNumber, { size: 32 }),
-            stringToHex(tagId, { size: 32 }),
-            custodian,
-          ],
-        },
-        {
-          onSuccess: (hash) => setMessage(`Product registered. Tx: ${hash.slice(0, 10)}...`),
-          onError: (error) => setMessage(error.message),
+      const owner = await readRegistryOwner();
+      if (mode !== "lookup" && owner.toLowerCase() !== connectedAddress.toLowerCase()) {
+        setMessage(
+          `Connected wallet is not the registry owner (${owner}). createBatch/mintBatch/bindTag are onlyOwner.`,
+        );
+        return;
+      }
+
+      if (mode === "createBatch") {
+        const qty = Number(quantity);
+        if (!Number.isInteger(qty) || qty <= 0) {
+          setMessage("Quantity must be a positive integer.");
+          return;
         }
+        const { txHash, batchIdHash } = await createBatchOnChain(
+          { ...walletClient, account: walletClient.account! },
+          { batchCode, quantity: qty },
+        );
+        setMessage(`Batch created. hash=${batchIdHash} tx=${txHash}`);
+        return;
+      }
+
+      if (mode === "mintBatch") {
+        const codes = productCodes
+          .split(/[\n,]+/)
+          .map((value) => value.trim())
+          .filter(Boolean);
+        if (codes.length === 0) {
+          setMessage("Provide at least one product code.");
+          return;
+        }
+        const { txHash, productIdHashes } = await mintBatchOnChain(
+          { ...walletClient, account: walletClient.account! },
+          { batchCode, productCodes: codes },
+        );
+        setMessage(`Minted ${productIdHashes.length} products. tx=${txHash}`);
+        return;
+      }
+
+      if (mode === "bindTag") {
+        const { txHash, productIdHash, tagIdHash } = await bindTagOnChain(
+          { ...walletClient, account: walletClient.account! },
+          { productCode, tagUid },
+        );
+        setMessage(`Tag bound. product=${productIdHash} tag=${tagIdHash} tx=${txHash}`);
+        return;
+      }
+
+      const batch = await readBatch(deriveOnChainId(batchCode));
+      const product = await readProduct(deriveOnChainId(productCode));
+      const tag = await readTag(deriveOnChainId(tagUid.trim().toUpperCase()));
+      setMessage(
+        JSON.stringify(
+          {
+            batchCode,
+            batch,
+            productCode,
+            product,
+            tagUid,
+            tag,
+          },
+          null,
+          2,
+        ),
       );
-    } catch {
-      setMessage("Product and metadata fields must be valid and fit in 32 bytes.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Transaction failed");
     }
   };
 
@@ -67,27 +188,74 @@ export default function ManufacturingPage() {
           <Topbar />
           <main className="mx-auto max-w-225 p-6 lg:p-10">
             <p className="text-[10px] uppercase tracking-[0.2em] text-gray-400">Manufacturing</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight">Register product</h1>
-            <p className="mt-2 text-sm text-gray-500">Create the on-chain product before sending it through custody.</p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight">Team 1 Registry</h1>
+            <p className="mt-2 text-sm text-gray-500">
+              Batch / mint / NFC bind against VeriChainRegistry. Authorization comes from Supabase
+              role_permissions; on-chain writes still require the registry owner.
+            </p>
+
+            <div className="mt-4 text-xs text-gray-500">{authMessage}</div>
+
+            <div className="mt-6 flex flex-wrap gap-2">
+              {(
+                [
+                  ["createBatch", "Create batch"],
+                  ["mintBatch", "Mint products"],
+                  ["bindTag", "Bind NFC tag"],
+                  ["lookup", "Lookup"],
+                ] as const
+              ).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setMode(value)}
+                  className={`rounded-lg border px-3 py-2 text-xs ${
+                    mode === value ? "border-black bg-black text-white" : "border-gray-200"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
 
             <form onSubmit={submit} className="mt-8 rounded-xl border border-gray-200 p-6">
               <div className="grid gap-5 sm:grid-cols-2">
-                <Field label="Product ID" value={productId} setValue={setProductId} numeric />
-                <Field label="Token ID" value={tokenId} setValue={setTokenId} numeric />
-                <Field label="Batch ID" value={batchId} setValue={setBatchId} />
-                <Field label="Serial number" value={serialNumber} setValue={setSerialNumber} />
-                <Field label="NFC tag ID" value={tagId} setValue={setTagId} />
-                <Field label="Initial custodian wallet" value={custodian} setValue={setCustodian} />
+                {(mode === "createBatch" || mode === "mintBatch" || mode === "lookup") && (
+                  <Field label="Batch code" value={batchCode} setValue={setBatchCode} />
+                )}
+                {mode === "createBatch" && (
+                  <Field label="Quantity" value={quantity} setValue={setQuantity} numeric />
+                )}
+                {mode === "mintBatch" && (
+                  <label className="block text-[10px] uppercase tracking-wider text-gray-400 sm:col-span-2">
+                    Product codes (comma or newline)
+                    <textarea
+                      value={productCodes}
+                      onChange={(event) => setProductCodes(event.target.value)}
+                      rows={4}
+                      className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm normal-case tracking-normal text-black outline-none focus:border-black"
+                    />
+                  </label>
+                )}
+                {(mode === "bindTag" || mode === "lookup") && (
+                  <Field label="Product code" value={productCode} setValue={setProductCode} />
+                )}
+                {(mode === "bindTag" || mode === "lookup") && (
+                  <Field label="NFC tag UID" value={tagUid} setValue={setTagUid} />
+                )}
               </div>
 
               <button
-                disabled={isPending}
                 className="mt-6 flex items-center gap-2 rounded-lg bg-black px-4 py-3 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <Factory size={14} />
-                {isPending ? "Confirming..." : "Register product"}
+                {mode === "lookup" ? "Read registry" : "Submit owner transaction"}
               </button>
-              {message && <p className="mt-4 wrap-break-word text-xs text-gray-500">{message}</p>}
+              {message && (
+                <pre className="mt-4 overflow-x-auto whitespace-pre-wrap break-words text-xs text-gray-500">
+                  {message}
+                </pre>
+              )}
             </form>
           </main>
         </div>

@@ -1,0 +1,37 @@
+specVersion: 0.0.5
+description: VeriChainRegistry identity events on Hedera testnet
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum/contract
+    name: VeriChainRegistry
+    network: testnet
+    source:
+      address: "0x2ffe6b68f7a840b3d92fdc2b3f7958ce0c0253c5"
+      abi: VeriChainRegistry
+      startBlock: 40188503
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Batch
+        - Product
+        - Tag
+        - Nonce
+        - RegistryEvent
+      abis:
+        - name: VeriChainRegistry
+          file: ./abis/VeriChainRegistry.json
+      eventHandlers:
+        - event: BatchCreated(indexed bytes32,uint32)
+          handler: handleBatchCreated
+        - event: BatchMinted(indexed bytes32,uint32,uint32)
+          handler: handleBatchMinted
+        - event: TagBound(indexed bytes32,indexed bytes32)
+          handler: handleTagBound
+        - event: TagRevoked(indexed bytes32,indexed bytes32)
+          handler: handleTagRevoked
+        - event: NonceConsumed(indexed bytes32,indexed bytes32)
+          handler: handleNonceConsumed
+      file: ./src/mapping.ts

@@ -9,6 +9,10 @@ contracts/out/
 contracts/cache/
 contracts/broadcast/
 
+subgraph/generated/
+subgraph/build/
+subgraph/graph-node/data/
+
 # Personal notes — do not push
 COMMANDS.md
 GIT_CHEATSHEET.md

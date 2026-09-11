@@ -33,32 +33,6 @@ export function manufacturerProductsQuery(
   return query;
 }
 
-export async function getDashboardCounts(orgId: string) {
-  const db = createServiceClient();
-
-  const [batchRes, productRes, boundRes] = await Promise.all([
-    db
-      .from("batches")
-      .select("id", { count: "exact", head: true })
-      .eq("manufacturer_org_id", orgId),
-    db
-      .from("products")
-      .select("id", { count: "exact", head: true })
-      .eq("manufacturer_org_id", orgId),
-    db
-      .from("products")
-      .select("id", { count: "exact", head: true })
-      .eq("manufacturer_org_id", orgId)
-      .eq("status", "TAG_BOUND"),
-  ]);
-
-  return {
-    batches: batchRes.count ?? 0,
-    products: productRes.count ?? 0,
-    bound: boundRes.count ?? 0,
-  };
-}
-
 export async function getManufacturerProduct(
   id: string,
   orgId: string,

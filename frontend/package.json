@@ -11,15 +11,18 @@
     "start": "next start",
     "seed": "tsx scripts/seed.ts",
     "registry:read": "tsx scripts/read-registry.ts",
+    "graph:batch": "tsx --require ./scripts/stub-server-only.cjs scripts/print-graph-batch.ts",
     "registry:create-batch": "tsx scripts/create-batch-onchain.ts",
     "supabase:check": "tsx scripts/check-supabase.ts",
+    "test:graph": "tsx --require ./scripts/stub-server-only.cjs scripts/test-graph.ts",
+    "test:graph-live": "tsx --require ./scripts/stub-server-only.cjs scripts/test-graph-live.ts",
     "test:shared": "tsx scripts/test-shared.ts",
     "test:schema": "tsx scripts/test-schema.ts",
     "test:batches": "tsx scripts/test-batches.ts",
     "test:auth-security": "tsx scripts/test-complete-login.ts && tsx scripts/test-auth-security.ts",
     "test:auth-flow": "tsx scripts/test-real-authenticated-flow.ts",
     "test:joint-proof": "tsx --require ./scripts/stub-server-only.cjs scripts/joint-proof.ts",
-    "test": "npm run test:shared && npm run test:schema && npm run test:batches && npm run test:nfc"
+    "test": "npm run test:shared && npm run test:graph && npm run test:schema && npm run test:batches && npm run test:nfc"
   },
   "dependencies": {
     "@privy-io/node": "^0.34.0",

@@ -1,0 +1,48 @@
+"""Chain hashes and counts only. Names, plant, and category stay in Supabase."""
+
+type Batch @entity {
+  id: ID!
+  quantity: BigInt!
+  mintedCount: BigInt!
+  status: String!
+  createdAt: BigInt!
+  createdTx: Bytes!
+  mintedAt: BigInt
+  mintedTx: Bytes
+  products: [Product!]! @derivedFrom(field: "batch")
+  events: [RegistryEvent!]! @derivedFrom(field: "batch")
+}
+
+type Product @entity {
+  id: ID!
+  batch: Batch
+  boundTag: Tag
+  events: [RegistryEvent!]! @derivedFrom(field: "product")
+}
+
+type Tag @entity {
+  id: ID!
+  status: String!
+  product: Product
+  nonces: [Nonce!]! @derivedFrom(field: "tag")
+  events: [RegistryEvent!]! @derivedFrom(field: "tag")
+}
+
+type Nonce @entity {
+  id: ID!
+  tag: Tag!
+  txHash: Bytes!
+  timestamp: BigInt!
+}
+
+type RegistryEvent @entity {
+  id: ID!
+  type: String!
+  batch: Batch
+  product: Product
+  tag: Tag
+  nonce: Nonce
+  txHash: Bytes!
+  timestamp: BigInt!
+  blockNumber: BigInt!
+}

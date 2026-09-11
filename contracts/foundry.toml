@@ -12,3 +12,6 @@ remappings = [
     "@openzeppelin/=lib/openzeppelin-contracts/",
     "openzeppelin-contracts/=lib/openzeppelin-contracts/"
 ]
+
+[rpc_endpoints]
+hedera_testnet = "https://testnet.hashio.io/api"

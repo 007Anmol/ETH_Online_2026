@@ -2,13 +2,16 @@
 
 import { Bell, Wallet } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useAccount, useConnect, useDisconnect } from "wagmi";
+import { useAccount, useConnect, useDisconnect, useSwitchChain } from "wagmi";
+import { hedera } from "@/lib/blockchain/wagmi";
 
 export default function Topbar() {
   const [mounted, setMounted] = useState(false);
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, chainId } = useAccount();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
+  const { switchChain } = useSwitchChain();
+  const onHedera = chainId === hedera.id;
 
   useEffect(() => {
     setMounted(true);
@@ -22,7 +25,7 @@ export default function Topbar() {
 
     const connector = connectors[0];
     if (connector) {
-      connect({ connector });
+      connect({ connector, chainId: hedera.id });
     }
   };
 
@@ -38,6 +41,15 @@ export default function Topbar() {
         <button className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition hover:border-black hover:text-black">
           <Bell size={15} />
         </button>
+
+        {mounted && isConnected && !onHedera && (
+          <button
+            onClick={() => switchChain({ chainId: hedera.id })}
+            className="rounded-lg border border-amber-400 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800"
+          >
+            Switch to Hedera 296
+          </button>
+        )}
 
         <button
           onClick={toggleWallet}

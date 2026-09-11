@@ -3,9 +3,9 @@
 
 insert into organizations (name, type, wallet_address, world_id_verified)
 values (
-  'Binance Test Manufacturer',
+  'Hedera Test Manufacturer',
   'MANUFACTURER',
-  lower('0x0000000000000000000000000000000000000001'),
+  lower('0x383B61c1Cc71bff244857DDb59191312bAFD63Ba'),
   false
 )
 on conflict (wallet_address) do update
@@ -21,13 +21,13 @@ insert into profiles (
   display_name
 )
 select
-  lower('0x0000000000000000000000000000000000000001'),
+  lower('0x383B61c1Cc71bff244857DDb59191312bAFD63Ba'),
   organizations.id,
   'MANUFACTURER',
   false,
-  'Binance Test Manufacturer'
+  'Hedera Test Manufacturer'
 from organizations
-where lower(organizations.wallet_address) = '0x0000000000000000000000000000000000000001'
+where lower(organizations.wallet_address) = lower('0x383B61c1Cc71bff244857DDb59191312bAFD63Ba')
 on conflict (wallet_address) do update
 set organization_id = excluded.organization_id,
     role = excluded.role,

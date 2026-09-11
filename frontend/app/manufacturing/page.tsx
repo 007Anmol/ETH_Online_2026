@@ -2,7 +2,8 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { Factory } from "lucide-react";
-import { useAccount, useWalletClient } from "wagmi";
+import { useAccount, useSwitchChain, useWalletClient } from "wagmi";
+import { hedera } from "@/lib/blockchain/wagmi";
 
 import Sidebar from "@/components/team2/Sidebar";
 import Topbar from "@/components/team2/Topbar";
@@ -43,8 +44,10 @@ async function fetchWalletAccess(wallet: string, permission: ManufacturerPermiss
 }
 
 export default function ManufacturingPage() {
-  const { address: connectedAddress, isConnected } = useAccount();
+  const { address: connectedAddress, isConnected, chainId } = useAccount();
   const { data: walletClient } = useWalletClient();
+  const { switchChain, isPending: isSwitching } = useSwitchChain();
+  const onHedera = chainId === hedera.id;
   const [mode, setMode] = useState<Mode>("createBatch");
   const [batchCode, setBatchCode] = useState("RADO-2026-001");
   const [quantity, setQuantity] = useState("1");
@@ -112,8 +115,16 @@ export default function ManufacturingPage() {
     event.preventDefault();
     setMessage("");
 
-    if (!isConnected || !connectedAddress || !walletClient) {
-      setMessage("Connect the Team 1 registry owner wallet first.");
+    if (!isConnected || !connectedAddress) {
+      setMessage("Connect the Team 1 registry owner wallet in the top bar first.");
+      return;
+    }
+    if (!onHedera) {
+      setMessage(`MetaMask is on chain ${chainId ?? "unknown"}. Switch to Hedera Testnet (${hedera.id}) and retry.`);
+      return;
+    }
+    if (!walletClient) {
+      setMessage("Wallet is connected but not ready to sign. Switch MetaMask to Hedera Testnet (296), then reconnect.");
       return;
     }
     if (!hasRegistryAddress()) {
@@ -210,7 +221,19 @@ export default function ManufacturingPage() {
               role_permissions; on-chain writes still require the registry owner.
             </p>
 
-            <div className="mt-4 text-xs text-gray-500">{authMessage}</div>
+            <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-gray-500">
+              <span>{authMessage}</span>
+              {isConnected && !onHedera && (
+                <button
+                  type="button"
+                  disabled={isSwitching}
+                  onClick={() => switchChain({ chainId: hedera.id })}
+                  className="rounded-lg border border-amber-400 bg-amber-50 px-3 py-1.5 font-medium text-amber-800 disabled:opacity-40"
+                >
+                  {isSwitching ? "Switching…" : "Switch MetaMask to Hedera Testnet"}
+                </button>
+              )}
+            </div>
 
             <div className="mt-6 flex flex-wrap gap-2">
               {(

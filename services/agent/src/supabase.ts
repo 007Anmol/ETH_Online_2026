@@ -64,7 +64,7 @@ export class SupabaseStore implements AnomalyStore, PaymentStore {
         checkpoint_type: checkpointType(checkpoint.point.checkpoint),
         recorded_at: new Date(checkpoint.point.timestamp * 1000).toISOString(),
         risk_score: checkpoint.riskScore,
-        tx_hash: checkpoint.chainTxHash ?? null,
+        chain_tx_hash: checkpoint.chainTxHash ?? null,
         anomaly_decision: checkpoint.riskScore >= 61 ? "ANOMALY" : "NORMAL",
       }),
     });
@@ -240,13 +240,17 @@ function checkpointType(label: string): "FACTORY" | "DISTRIBUTOR" | "LOGISTICS_H
 }
 
 async function databaseProductId(productId: string): Promise<string> {
-  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(productId)) return productId;
-  try {
-    const rows = await supabaseRequest<Array<{ id: string }>>(
-      `products?select=id&token_id=eq.${encodeURIComponent(productId)}&limit=1`,
-    );
-    return rows[0]?.id ?? productId;
-  } catch {
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(productId)) {
     return productId;
   }
+
+  const rows = await supabaseRequest<Array<{ id: string }>>(
+    `products?select=id&token_id=eq.${encodeURIComponent(productId)}&limit=1`,
+  );
+  if (!rows[0]?.id) {
+    throw new Error(
+      `No products.token_id=${productId}. Link logistics id to a Team 1 product, e.g. UPDATE products SET token_id = ${productId} WHERE product_code = 'VC-RADO2026001-000001';`,
+    );
+  }
+  return rows[0].id;
 }

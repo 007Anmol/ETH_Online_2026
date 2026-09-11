@@ -23,6 +23,7 @@ type ContractEscrowRecord = readonly [bigint, `0x${string}`, `0x${string}`, bigi
 
 export default function EscrowPage() {
   const { address: userAddress, isConnected } = useAccount();
+  const [mounted, setMounted] = useState(false);
   const [payee, setPayee] = useState("");
   const [amount, setAmount] = useState("0.1");
   const [productId, setProductId] = useState("1");
@@ -67,6 +68,10 @@ export default function EscrowPage() {
       setIsLoadingDb(false);
     }
   };
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     void loadDbEscrows();
@@ -154,7 +159,7 @@ export default function EscrowPage() {
                   <RefreshCw size={12} className={isLoadingDb ? "animate-spin" : ""} />
                   Sync DB
                 </button>
-                <StatusBadge status={isConnected ? "CONNECTED" : "PENDING"} />
+                <StatusBadge status={mounted && isConnected ? "CONNECTED" : "PENDING"} />
               </div>
             </div>
 

@@ -40,6 +40,7 @@ type ContractShipmentRecord = readonly [
 
 export default function ShipmentsPage() {
   const { address: userAddress, isConnected } = useAccount();
+  const [mounted, setMounted] = useState(false);
   const [productId, setProductId] = useState("1");
   const [team1ProductCode, setTeam1ProductCode] = useState("VC-RADO2026001-000001");
   const [receiver, setReceiver] = useState("");
@@ -81,6 +82,10 @@ export default function ShipmentsPage() {
       setIsLoadingDb(false);
     }
   };
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     void loadDbShipments();
@@ -225,7 +230,7 @@ export default function ShipmentsPage() {
                   <RefreshCw size={12} className={isLoadingDb ? "animate-spin" : ""} />
                   Sync DB
                 </button>
-                <StatusBadge status={isConnected ? "CONNECTED" : "PENDING"} />
+                <StatusBadge status={mounted && isConnected ? "CONNECTED" : "PENDING"} />
               </div>
             </div>
 

@@ -9,6 +9,9 @@ export type AgentResult = {
 	requestId: string;
 	productId: string;
 	riskScore: number;
+	level?: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+	findings?: string[];
+	explanation?: string;
 	shouldFreeze: boolean;
 	checkpointTxHash?: string;
 	anomalyTxHash?: string;
@@ -26,6 +29,9 @@ export async function processTelemetry(
 			requestId: batch.requestId,
 			productId: batch.current.productId,
 			riskScore: 0,
+			level: "LOW",
+			findings: [],
+			explanation: "Duplicate request — already processed.",
 			shouldFreeze: false,
 		};
 	}
@@ -46,7 +52,11 @@ export async function processTelemetry(
 			requestId: ingestion.requestId,
 			productId: ingestion.analysis.productId,
 			riskScore: analysis.riskScore,
+			level: analysis.level,
+			findings: analysis.findings,
+			explanation: analysis.explanation,
 			shouldFreeze: false,
+			checkpointTxHash,
 		};
 	}
 
@@ -71,6 +81,9 @@ export async function processTelemetry(
 		requestId: ingestion.requestId,
 		productId: analysis.productId,
 		riskScore: analysis.riskScore,
+		level: analysis.level,
+		findings: analysis.findings,
+		explanation: analysis.explanation,
 		shouldFreeze: true,
 		checkpointTxHash,
 		anomalyTxHash,

@@ -85,8 +85,44 @@ export default function CheckpointsPage() {
             </form>
 
             <section className="rounded-xl border border-gray-200 p-6">
-              <div className="flex items-start justify-between"><div><p className="text-[10px] uppercase tracking-wider text-gray-400">AI agent decision</p><h2 className="mt-2 text-xl font-semibold">Risk decision</h2></div>{result && <StatusBadge status={result.level} />}</div>
-              {!result ? <div className="mt-16 text-center text-sm text-gray-400">Submit telemetry to see the decision.</div> : <><div className="mt-8 flex items-end gap-3"><span className="text-5xl font-semibold">{result.riskScore}</span><span className="pb-2 text-xs text-gray-400">/ 100 risk score</span></div><p className="mt-5 text-sm leading-6 text-gray-600">{result.explanation}</p><div className="mt-6 space-y-3">{result.findings.map((finding) => <div key={finding} className="flex gap-3 rounded-lg border border-gray-200 p-3"><AlertTriangle size={15} className="mt-0.5 shrink-0" /><p className="text-xs text-gray-500">{finding}</p></div>)}</div></>}
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-gray-400">AI agent decision</p>
+                  <h2 className="mt-2 text-xl font-semibold">Risk decision</h2>
+                </div>
+                {result && <StatusBadge status={result.level ?? (result.shouldFreeze ? "HIGH" : "LOW")} />}
+              </div>
+              {!result ? (
+                <div className="mt-16 text-center text-sm text-gray-400">Submit telemetry to see the decision.</div>
+              ) : (
+                <>
+                  <div className="mt-8 flex items-end gap-3">
+                    <span className="text-5xl font-semibold">{result.riskScore}</span>
+                    <span className="pb-2 text-xs text-gray-400">/ 100 risk score</span>
+                  </div>
+                  <p className="mt-5 text-sm leading-6 text-gray-600">
+                    {result.explanation ?? (result.shouldFreeze ? "Anomaly threshold reached." : "No freeze required.")}
+                  </p>
+                  <div className="mt-6 space-y-3">
+                    {(result.findings ?? []).map((finding) => (
+                      <div key={finding} className="flex gap-3 rounded-lg border border-gray-200 p-3">
+                        <AlertTriangle size={15} className="mt-0.5 shrink-0" />
+                        <p className="text-xs text-gray-500">{finding}</p>
+                      </div>
+                    ))}
+                    {(result.findings ?? []).length === 0 && (
+                      <p className="text-xs text-gray-400">No detailed findings returned.</p>
+                    )}
+                  </div>
+                  {(result.checkpointTxHash || result.anomalyTxHash || result.escrowTxHash) && (
+                    <div className="mt-6 space-y-1 text-[11px] text-gray-400">
+                      {result.checkpointTxHash && <p>Checkpoint tx: {result.checkpointTxHash}</p>}
+                      {result.anomalyTxHash && <p>Anomaly tx: {result.anomalyTxHash}</p>}
+                      {result.escrowTxHash && <p>Escrow freeze tx: {result.escrowTxHash}</p>}
+                    </div>
+                  )}
+                </>
+              )}
             </section>
           </div>
         </main>

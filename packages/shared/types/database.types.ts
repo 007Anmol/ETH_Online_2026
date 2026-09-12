@@ -3,6 +3,8 @@ import type {
   BatchStatus,
   CheckpointType,
   EscrowStatus,
+  GrievanceCategory,
+  GrievanceStatus,
   ManufacturingOperationType,
   OrganizationType,
   Permission,
@@ -10,8 +12,11 @@ import type {
   ProductEventType,
   ProductStatus,
   ResaleStatus,
+  SettlementStatus,
+  SyncStatus,
   TagBindingAction,
   TagStatus,
+  TransferStatus,
   UserRole,
   VerificationResult,
 } from "./enums";
@@ -356,8 +361,22 @@ export type Database = {
           claimed_at: string;
           chain_tx_hash: string | null;
         };
-        Insert: Record<string, never>;
-        Update: Record<string, never>;
+        Insert: {
+          id?: string;
+          product_id: string;
+          owner_wallet_address: string;
+          privy_user_id?: string | null;
+          claimed_at?: string;
+          chain_tx_hash?: string | null;
+        };
+        Update: {
+          id?: string;
+          product_id?: string;
+          owner_wallet_address?: string;
+          privy_user_id?: string | null;
+          claimed_at?: string;
+          chain_tx_hash?: string | null;
+        };
         Relationships: [];
       };
       resale_listings: {
@@ -371,8 +390,188 @@ export type Database = {
           created_at: string;
           updated_at: string;
         };
-        Insert: Record<string, never>;
-        Update: Record<string, never>;
+        Insert: {
+          id?: string;
+          product_id: string;
+          seller_wallet_address: string;
+          buyer_wallet_address?: string | null;
+          status?: ResaleStatus;
+          escrow_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          product_id?: string;
+          seller_wallet_address?: string;
+          buyer_wallet_address?: string | null;
+          status?: ResaleStatus;
+          escrow_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      ownership_transfers: {
+        Row: {
+          id: string;
+          product_id: string;
+          from_wallet_address: string;
+          to_wallet_address: string;
+          status: TransferStatus;
+          sync_status: SyncStatus;
+          chain_tx_hash: string | null;
+          idempotency_key: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          product_id: string;
+          from_wallet_address: string;
+          to_wallet_address: string;
+          status?: TransferStatus;
+          sync_status?: SyncStatus;
+          chain_tx_hash?: string | null;
+          idempotency_key?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          product_id?: string;
+          from_wallet_address?: string;
+          to_wallet_address?: string;
+          status?: TransferStatus;
+          sync_status?: SyncStatus;
+          chain_tx_hash?: string | null;
+          idempotency_key?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      resale_settlements: {
+        Row: {
+          id: string;
+          listing_id: string;
+          product_id: string;
+          buyer_wallet_address: string;
+          seller_wallet_address: string;
+          amount_tinybar: number;
+          nft_contract_address: string;
+          marketplace_contract_address: string;
+          status: SettlementStatus;
+          chain_tx_hash: string | null;
+          sync_status: SyncStatus;
+          transfer_id: string | null;
+          idempotency_key: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          listing_id: string;
+          product_id: string;
+          buyer_wallet_address: string;
+          seller_wallet_address: string;
+          amount_tinybar: number;
+          nft_contract_address: string;
+          marketplace_contract_address: string;
+          status?: SettlementStatus;
+          chain_tx_hash?: string | null;
+          sync_status?: SyncStatus;
+          transfer_id?: string | null;
+          idempotency_key?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          listing_id?: string;
+          product_id?: string;
+          buyer_wallet_address?: string;
+          seller_wallet_address?: string;
+          amount_tinybar?: number;
+          nft_contract_address?: string;
+          marketplace_contract_address?: string;
+          status?: SettlementStatus;
+          chain_tx_hash?: string | null;
+          sync_status?: SyncStatus;
+          transfer_id?: string | null;
+          idempotency_key?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      grievances: {
+        Row: {
+          id: string;
+          grievance_number: string;
+          consumer_profile_id: string;
+          product_id: string;
+          category: GrievanceCategory;
+          description: string;
+          evidence_ref: string | null;
+          status: GrievanceStatus;
+          created_at: string;
+          updated_at: string;
+          resolved_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          grievance_number: string;
+          consumer_profile_id: string;
+          product_id: string;
+          category: GrievanceCategory;
+          description: string;
+          evidence_ref?: string | null;
+          status?: GrievanceStatus;
+          created_at?: string;
+          updated_at?: string;
+          resolved_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          grievance_number?: string;
+          consumer_profile_id?: string;
+          product_id?: string;
+          category?: GrievanceCategory;
+          description?: string;
+          evidence_ref?: string | null;
+          status?: GrievanceStatus;
+          created_at?: string;
+          updated_at?: string;
+          resolved_at?: string | null;
+        };
+        Relationships: [];
+      };
+      grievance_events: {
+        Row: {
+          id: string;
+          grievance_id: string;
+          status: GrievanceStatus;
+          note: string;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          grievance_id: string;
+          status: GrievanceStatus;
+          note: string;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          grievance_id?: string;
+          status?: GrievanceStatus;
+          note?: string;
+          created_by?: string | null;
+          created_at?: string;
+        };
         Relationships: [];
       };
     };
@@ -392,6 +591,11 @@ export type Database = {
       escrow_status: EscrowStatus;
       resale_status: ResaleStatus;
       product_event_type: ProductEventType;
+      transfer_status: TransferStatus;
+      sync_status: SyncStatus;
+      settlement_status: SettlementStatus;
+      grievance_category: GrievanceCategory;
+      grievance_status: GrievanceStatus;
     };
     CompositeTypes: Record<string, never>;
   };

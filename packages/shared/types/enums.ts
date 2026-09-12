@@ -141,8 +141,61 @@ export const PRODUCT_EVENT_TYPES = [
   "OWNERSHIP_CLAIMED",
   "RESALE_INITIATED",
   "PHYSICAL_HANDOFF_CONFIRMED",
+  "TRANSFER_SUBMITTED",
+  "TRANSFER_CONFIRMED",
+  "TRANSFER_FAILED",
+  "SETTLEMENT_BLOCKED",
+  "SETTLEMENT_COMPLETED",
+  "GRIEVANCE_SUBMITTED",
+  "GRIEVANCE_STATUS_CHANGED",
 ] as const;
 export type ProductEventType = (typeof PRODUCT_EVENT_TYPES)[number];
+
+export const TRANSFER_STATUSES = [
+  "PENDING_SIGNATURE",
+  "SUBMITTED",
+  "CONFIRMING",
+  "CONFIRMED",
+  "FAILED",
+  "REVERTED",
+] as const;
+export type TransferStatus = (typeof TRANSFER_STATUSES)[number];
+
+export const SYNC_STATUSES = ["PENDING", "SYNCED", "SYNC_FAILED"] as const;
+export type SyncStatus = (typeof SYNC_STATUSES)[number];
+
+export const SETTLEMENT_STATUSES = [
+  "PURCHASE_PENDING",
+  "PAYMENT_PROTECTED",
+  "PRODUCT_VALIDATION",
+  "SETTLEMENT_BLOCKED",
+  "SETTLEMENT_PENDING",
+  "NFT_TRANSFER_PENDING",
+  "OWNERSHIP_CONFIRMED",
+  "PAYMENT_RELEASED",
+  "COMPLETED",
+  "FAILED",
+] as const;
+export type SettlementStatus = (typeof SETTLEMENT_STATUSES)[number];
+
+export const GRIEVANCE_CATEGORIES = [
+  "COUNTERFEIT_SUSPICION",
+  "DAMAGED_PRODUCT",
+  "MISSING_HISTORY",
+  "OWNERSHIP_DISPUTE",
+  "OTHER",
+] as const;
+export type GrievanceCategory = (typeof GRIEVANCE_CATEGORIES)[number];
+
+export const GRIEVANCE_STATUSES = [
+  "OPEN",
+  "UNDER_REVIEW",
+  "WAITING_FOR_CONSUMER",
+  "RESOLVED",
+  "REJECTED",
+  "ESCALATED",
+] as const;
+export type GrievanceStatus = (typeof GRIEVANCE_STATUSES)[number];
 
 export const TAG_BINDING_ACTIONS = ["BOUND", "REVOKED"] as const;
 export type TagBindingAction = (typeof TAG_BINDING_ACTIONS)[number];

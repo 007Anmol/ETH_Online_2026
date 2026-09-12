@@ -57,12 +57,15 @@ function unseal(value: string): WalletChallenge | null {
   }
 }
 
-export async function issueWalletChallenge(walletAddress: string) {
+export async function issueWalletChallenge(
+  walletAddress: string,
+  purpose: string = "manufacturer authentication",
+) {
   const nonce = randomBytes(32).toString("hex");
   const expiresAt = Math.floor(Date.now() / 1000) + CHALLENGE_TTL_SECONDS;
   const normalizedAddress = walletAddress.trim().toLowerCase();
   const message = [
-    "VeriChain manufacturer authentication",
+    `VeriChain ${purpose}`,
     `Wallet: ${normalizedAddress}`,
     `Nonce: ${nonce}`,
     `Expires: ${expiresAt}`,

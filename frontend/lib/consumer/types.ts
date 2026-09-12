@@ -108,3 +108,37 @@ export type ConsumerIdentity = {
   loginMethod: ConsumerLoginMethod;
   walletAddress: string | null;
 };
+
+/**
+ * Real, blockchain-first transfer transaction lifecycle (see
+ * frontend/CONSUMER_BACKEND_PLAN.md's "Architecture correction"). Each state
+ * must come from an actual wallet event, Hedera receipt, or on-chain read —
+ * never a timer.
+ */
+export type TransferState =
+  | "IDLE"
+  | "VALIDATING"
+  | "AWAITING_SIGNATURE"
+  | "SUBMITTED"
+  | "CONFIRMING_ON_HEDERA"
+  | "VERIFYING_OWNERSHIP"
+  | "CONFIRMED"
+  | "SIGNATURE_REJECTED"
+  | "TRANSACTION_REVERTED"
+  | "TRANSACTION_FAILED"
+  | "OWNERSHIP_VERIFICATION_FAILED"
+  | "WRONG_NETWORK";
+
+export type TransferSnapshot = {
+  productId: string;
+  productIdHash: `0x${string}`;
+  fromWalletAddress: string;
+  toWalletAddress: string;
+  state: TransferState;
+  txHash: `0x${string}` | null;
+  error: string | null;
+  /** Whether the backend has durably recorded the confirmed state yet. Not
+   *  a blocker for showing CONFIRMED to the user — see the plan's
+   *  "Supabase is asynchronous" rule. */
+  syncStatus: "PENDING" | "SYNCED" | "SYNC_FAILED" | "NOT_APPLICABLE";
+};

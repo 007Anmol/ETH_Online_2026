@@ -25,6 +25,7 @@ export function useNfcDemo(
   const [result, setResult] = useState<VerifyView | null>(initialResult);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [graphNonce, setGraphNonce] = useState<{ txHash: string; timestamp: string } | null>(null);
 
   const selected = bound.find((product) => product.id === productId);
 
@@ -38,6 +39,18 @@ export function useNfcDemo(
     if (!ok && !data.result) {
       setError(data.error ?? failLabel);
       return null;
+    }
+    if (data.result === "AUTHENTIC" || data.result === "DUPLICATE") {
+      const history = await fetch(
+        `/api/nfc/history?tag_uid=${encodeURIComponent(payload.tag_uid)}&nonce=${encodeURIComponent(payload.nonce)}`,
+        { cache: "no-store" },
+      );
+      if (history.ok) {
+        const body = (await history.json()) as {
+          consumed?: { txHash: string; timestamp: string } | null;
+        };
+        setGraphNonce(body.consumed ?? null);
+      }
     }
     return data;
   }
@@ -115,6 +128,7 @@ export function useNfcDemo(
     selected,
     lastPayload,
     result,
+    graphNonce,
     error,
     busy,
     authenticTap,

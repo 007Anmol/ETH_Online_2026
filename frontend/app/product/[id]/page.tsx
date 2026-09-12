@@ -4,6 +4,7 @@ import { VerifyResult } from "@/components/verify-result";
 import { formatDisplayDate, formatDisplayWhen } from "@/lib/format";
 import { getPublicProduct } from "@/lib/nfc/get-public-product";
 import { productCategoryLabel, type ProductStatus, type VerificationResult } from "@/lib/types";
+import { GraphProductTimeline } from "@/components/graph-product-timeline";
 
 export const dynamic = "force-dynamic";
 
@@ -162,6 +163,8 @@ export default async function ProductPage({
           </ul>
         )}
       </div>
+
+      <GraphProductTimeline events={product.graphEvents} />
     </section>
   );
 }

@@ -53,6 +53,7 @@ export function graphEventType(type: string): ProductEventType {
 }
 
 export type BatchLabels = {
+  db_id?: string;
   batch_code: string;
   product_name: string;
   plant_id: string;
@@ -95,6 +96,7 @@ export async function getGraphDashboardCounts(): Promise<DashboardCounts> {
 
 export type LabeledBatch = {
   id: string;
+  db_id: string | null;
   batch_code: string | null;
   product_name: string | null;
   plant_id: string | null;
@@ -116,12 +118,13 @@ export async function batchLabelsByHash(
 
   const { data, error } = await createServiceClient()
     .from("batches")
-    .select("batch_id_hash, batch_code, product_name, plant_id, product_category")
+    .select("id, batch_id_hash, batch_code, product_name, plant_id, product_category")
     .in("batch_id_hash", ids);
   if (error) throw new Error(error.message);
 
   for (const row of data ?? []) {
     labels.set(graphId(row.batch_id_hash), {
+      db_id: row.id,
       batch_code: row.batch_code,
       product_name: row.product_name,
       plant_id: row.plant_id,
@@ -177,6 +180,7 @@ export function labelGraphBatch(
 ): LabeledBatch {
   return {
     id: graphId(batch.id),
+    db_id: labels?.db_id ?? null,
     batch_code: labels?.batch_code ?? null,
     product_name: labels?.product_name ?? null,
     plant_id: labels?.plant_id ?? null,

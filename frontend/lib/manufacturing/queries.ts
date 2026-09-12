@@ -4,6 +4,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import { createServiceClient } from "@/lib/supabase";
 import type { Batch, Product } from "@/lib/types";
+import { deriveOnChainId } from "@/lib/crypto/hash";
+import { fetchGraphProduct } from "@/lib/graphql";
 
 export function manufacturerBatchesQuery(
   supabase: SupabaseClient<Database>,
@@ -36,7 +38,7 @@ export function manufacturerProductsQuery(
 export async function getManufacturerProduct(
   id: string,
   orgId: string,
-): Promise<{ product: Product; batch: Batch; tagId: string | null; events: import("@/lib/types").ProductEvent[] } | null> {
+): Promise<{ product: Product; batch: Batch; tagId: string | null; graph: Awaited<ReturnType<typeof fetchGraphProduct>> } | null> {
   const db = createServiceClient();
   const { data: product } = await db
     .from("products")
@@ -66,16 +68,12 @@ export async function getManufacturerProduct(
     if (tag) tagId = tag.id;
   }
 
-  const { data: events } = await db
-    .from("product_events")
-    .select("*")
-    .eq("product_id", id)
-    .order("occurred_at", { ascending: false });
+  const graph = await fetchGraphProduct(deriveOnChainId(product.product_code));
 
   return { 
     product: product as Product, 
     batch: batch as Batch, 
     tagId,
-    events: (events ?? []) as import("@/lib/types").ProductEvent[]
+    graph,
   };
 }

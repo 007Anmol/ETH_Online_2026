@@ -24,12 +24,14 @@ export type GraphBatch = {
   createdTx: string;
   mintedAt: string | null;
   mintedTx: string | null;
+  events?: GraphRegistryEvent[];
 };
 
 export type GraphProduct = {
   id: string;
-  batch: { id: string } | null;
+  batch: GraphBatch | null;
   boundTag: { id: string; status: string } | null;
+  events: GraphRegistryEvent[];
 };
 
 export type GraphTag = {
@@ -152,8 +154,32 @@ export async function fetchGraphProduct(
     `query Product($id: ID!) {
       product(id: $id) {
         id
-        batch { id }
+        batch {
+          ${BATCH_FIELDS}
+          events(orderBy: timestamp, orderDirection: asc) {
+            id
+            type
+            txHash
+            timestamp
+            blockNumber
+            batch { id }
+            product { id }
+            tag { id }
+            nonce { id }
+          }
+        }
         boundTag { id status }
+        events(orderBy: timestamp, orderDirection: asc) {
+          id
+          type
+          txHash
+          timestamp
+          blockNumber
+          batch { id }
+          product { id }
+          tag { id }
+          nonce { id }
+        }
       }
     }`,
     { id: normalized },

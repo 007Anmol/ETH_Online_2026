@@ -12,6 +12,9 @@ services:
       - postgres
     extra_hosts:
       - host.docker.internal:host-gateway
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
     environment:
       postgres_host: postgres
       postgres_user: "graph-node"

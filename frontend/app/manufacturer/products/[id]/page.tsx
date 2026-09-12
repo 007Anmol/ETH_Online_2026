@@ -5,6 +5,7 @@ import { getSession } from "@/lib/session";
 import { productCategoryLabel } from "@/lib/types";
 import { RevokeButton } from "./revoke-button";
 import { HashScanLink } from "@/components/ui/hashscan-link";
+import { GraphProductTimeline } from "@/components/graph-product-timeline";
 
 export const metadata = { title: "Product detail — VeriChain" };
 
@@ -75,11 +76,22 @@ export default async function ProductDetailPage({ params }: Props) {
           </h2>
           <dl className="grid grid-cols-2 gap-x-8 gap-y-4 text-sm">
             <Field label="Batch code" value={batch.batch_code} mono />
-            <Field label="Batch status" value={batch.status} />
+            <Field label="Batch status" value={result.graph?.batch?.status ?? "Not indexed"} />
             <Field label="Product name" value={batch.product_name} />
             <Field label="Plant" value={batch.plant_id} mono />
             <Field label="Manufactured" value={batch.manufacturing_date} />
-            <Field label="Quantity" value={`${batch.minted_count} / ${batch.quantity}`} />
+            <Field
+              label="Quantity"
+              value={result.graph?.batch ? `${result.graph.batch.mintedCount} / ${result.graph.batch.quantity}` : "Not indexed"}
+            />
+            <Field
+              label="Created on chain"
+              value={result.graph?.batch ? new Date(Number(result.graph.batch.createdAt) * 1000).toLocaleString() : "Not indexed"}
+            />
+            <Field
+              label="Minted on chain"
+              value={result.graph?.batch?.mintedAt ? new Date(Number(result.graph.batch.mintedAt) * 1000).toLocaleString() : "—"}
+            />
             <Field label="Category" value={productCategoryLabel(batch.product_category)} />
           </dl>
         </div>
@@ -108,45 +120,9 @@ export default async function ProductDetailPage({ params }: Props) {
         </div>
       </div>
 
-      {/* Blockchain Events */}
-      {result.events.length > 0 && (
-        <div className="mt-8 rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
-          <div className="border-b border-zinc-100 px-6 py-5">
-            <h2 className="text-sm font-semibold text-zinc-900">Blockchain Events</h2>
-            <p className="mt-1 text-xs text-zinc-500">
-              Immutable history anchored on the Hedera Testnet.
-            </p>
-          </div>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-zinc-100 bg-zinc-50 text-left text-xs font-medium uppercase tracking-wider text-zinc-500">
-                <th className="px-6 py-3">Event</th>
-                <th className="px-6 py-3">Chain TX</th>
-                <th className="px-6 py-3 text-right">Date</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-100">
-              {result.events.map((event) => (
-                <tr key={event.id} className="hover:bg-zinc-50">
-                  <td className="px-6 py-3 font-medium text-zinc-900 text-xs">
-                    {event.event_type.replace(/_/g, " ")}
-                  </td>
-                  <td className="px-6 py-3">
-                    {event.chain_tx_hash ? (
-                      <HashScanLink txHash={event.chain_tx_hash} />
-                    ) : (
-                      <span className="text-zinc-400 font-mono text-[10px]">—</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-3 text-right text-xs text-zinc-500">
-                    {new Date(event.occurred_at).toLocaleString()}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <GraphProductTimeline
+        events={[...(result.graph?.batch?.events ?? []), ...(result.graph?.events ?? [])]}
+      />
     </main>
   );
 }

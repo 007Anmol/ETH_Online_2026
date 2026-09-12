@@ -1,6 +1,7 @@
 import "server-only";
 
-import { looksLikeUuid } from "@/lib/crypto/hash";
+import { deriveOnChainId, looksLikeUuid } from "@/lib/crypto/hash";
+import { fetchGraphProduct, type GraphRegistryEvent } from "@/lib/graphql";
 import { createServiceClient } from "@/lib/supabase";
 import type { ProductCategory, ProductStatus, VerificationResult } from "@/lib/types";
 
@@ -22,6 +23,7 @@ export type PublicProduct = {
   plant_id: string;
   bound_tag_uid: string | null;
   attempts: PublicProductAttempt[];
+  graphEvents: GraphRegistryEvent[];
 };
 
 export async function getPublicProduct(
@@ -60,6 +62,7 @@ export async function getPublicProduct(
       .order("created_at", { ascending: false })
       .limit(8),
   ]);
+  const graph = await fetchGraphProduct(deriveOnChainId(product.product_code));
 
   return {
     id: product.id,
@@ -77,5 +80,6 @@ export async function getPublicProduct(
       result: attempt.result,
       created_at: attempt.created_at,
     })),
+    graphEvents: [...(graph?.batch?.events ?? []), ...(graph?.events ?? [])],
   };
 }

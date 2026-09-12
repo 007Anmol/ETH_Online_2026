@@ -1,25 +1,21 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { manufacturerBatchesQuery } from "@/lib/manufacturing";
 import { getSession } from "@/lib/session";
-import { createServiceClient } from "@/lib/supabase";
-import { productCategoryLabel, type Batch } from "@/lib/types";
+import { productCategoryLabel } from "@/lib/types";
 import { HashScanLink } from "@/components/ui/hashscan-link";
+import { labeledGraphBatches, type LabeledBatch } from "@/lib/view";
 
 export const metadata = { title: "Batches — VeriChain" };
 
-async function getBatches(orgId: string): Promise<Batch[]> {
-  const { data } = await manufacturerBatchesQuery(createServiceClient(), orgId);
-  return (data as Batch[]) ?? [];
+async function getBatches(): Promise<LabeledBatch[]> {
+  return labeledGraphBatches(1000);
 }
 
 export default async function BatchesPage() {
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const batches = session.organizationId
-    ? await getBatches(session.organizationId)
-    : [];
+  const batches = session.organizationId ? await getBatches() : [];
 
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-10">
@@ -60,26 +56,26 @@ export default async function BatchesPage() {
               {batches.map((b) => (
                 <tr key={b.id} className="hover:bg-zinc-50">
                   <td className="px-4 py-3 font-mono text-xs font-semibold text-zinc-900">
-                    {b.batch_code}
+                    {b.batch_code ?? b.id}
                   </td>
-                  <td className="px-4 py-3 text-zinc-700">{b.product_name}</td>
+                  <td className="px-4 py-3 text-zinc-700">{b.product_name ?? "—"}</td>
                   <td className="px-4 py-3 text-zinc-500">
-                    {productCategoryLabel(b.product_category)}
+                    {b.product_category ? productCategoryLabel(b.product_category) : "—"}
                   </td>
-                  <td className="px-4 py-3 text-zinc-500">{b.plant_id}</td>
-                  <td className="px-4 py-3 text-zinc-700">{b.quantity}</td>
+                  <td className="px-4 py-3 text-zinc-500">{b.plant_id ?? "—"}</td>
+                  <td className="px-4 py-3 text-zinc-700">{b.mintedCount} / {b.quantity}</td>
                   <td className="px-4 py-3">
                     <StatusBadge status={b.status} />
                   </td>
                   <td className="px-4 py-3">
-                    {b.chain_tx_hash ? <HashScanLink txHash={b.chain_tx_hash} /> : <span className="text-zinc-400 font-mono text-[10px]">—</span>}
+                    {b.mintedTx ? <HashScanLink txHash={b.mintedTx} /> : <HashScanLink txHash={b.createdTx} />}
                   </td>
                   <td className="px-4 py-3 text-zinc-400 text-xs">
-                    {new Date(b.created_at).toLocaleDateString()}
+                    {new Date(b.createdAt * 1000).toLocaleDateString()}
                   </td>
                   <td className="px-4 py-3">
                     <Link
-                      href={`/manufacturer/products?batch_id=${b.id}`}
+                      href={b.db_id ? `/manufacturer/products?batch_id=${b.db_id}` : "/manufacturer/products"}
                       className="text-xs text-zinc-500 hover:text-zinc-900 hover:underline"
                     >
                       Products →

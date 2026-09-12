@@ -4,6 +4,7 @@ import { BoundProductSelect } from "@/components/bound-product-select";
 import { VerifyResult } from "@/components/verify-result";
 import { useNfcDemo } from "@/lib/nfc/use-nfc-demo";
 import type { BindableProduct } from "@/lib/nfc/product-summary";
+import { HashScanLink } from "@/components/ui/hashscan-link";
 
 export function SimulatorPanel({ products }: { products: BindableProduct[] }) {
   const demo = useNfcDemo(products, {});
@@ -74,6 +75,15 @@ export function SimulatorPanel({ products }: { products: BindableProduct[] }) {
             Verify result will appear here from the API.
           </div>
         )}
+        {demo.graphNonce ? (
+          <div className="mt-6 rounded-xl border border-zinc-200 bg-white p-5">
+            <h2 className="text-sm font-semibold text-zinc-900">Graph history</h2>
+            <p className="mt-2 text-sm text-zinc-600">
+              Nonce consumed on chain. A replay is DUPLICATE because this nonce already exists in The Graph.
+            </p>
+            <HashScanLink txHash={demo.graphNonce.txHash} className="mt-3" />
+          </div>
+        ) : null}
       </section>
     </div>
   );

@@ -18,3 +18,18 @@ export {
   type RegistryTx,
   type RevokeTagOnChainInput,
 } from "./registry";
+export {
+  cancelListingOnChain,
+  CONSUMER_MARKETPLACE_BUY_GAS,
+  CONSUMER_MARKETPLACE_SIMPLE_WRITE_GAS,
+  CONSUMER_NFT_SIMPLE_WRITE_GAS,
+  getConsumerNftOwner,
+  getOnChainListing,
+  hbarToTinybars,
+  hbarToTransactionValue,
+  mintConsumerNftOnChain,
+  setProductBlockedOnChain,
+  tinybarsToHbarString,
+  type ConsumerTx,
+  type OnChainListing,
+} from "./consumer";

@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { motion } from "framer-motion";
 import type { ReactNode } from "react";
 
 type ButtonProps = {
@@ -16,15 +19,17 @@ export function Button({
 }: ButtonProps) {
   const styles =
     variant === "primary"
-      ? "bg-[var(--foreground)] text-[var(--background)] hover:opacity-85"
-      : "border border-[var(--border)] text-[var(--foreground)] hover:border-[var(--foreground)]";
+      ? "btn-accent"
+      : "border border-[var(--border)] text-[var(--foreground)] hover:border-[var(--accent)] hover:text-[var(--accent)]";
 
   return (
-    <Link
-      href={href}
-      className={`inline-flex h-12 items-center justify-center rounded-full px-6 text-sm font-medium transition-all duration-300 ${styles} ${className}`}
-    >
-      {children}
-    </Link>
+    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} className="inline-block">
+      <Link
+        href={href}
+        className={`inline-flex h-12 items-center justify-center rounded-full px-6 text-sm font-medium transition-colors duration-300 ${styles} ${className}`}
+      >
+        {children}
+      </Link>
+    </motion.div>
   );
 }

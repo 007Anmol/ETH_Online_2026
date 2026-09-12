@@ -34,6 +34,25 @@ export type SendContractCallInput = {
   abi: Abi;
   functionName: string;
   args?: readonly unknown[];
+  /**
+   * HBAR to send with the call, in the standard 18-decimal ("weibar")
+   * convention — i.e. `parseEther("2")` for 2 HBAR — for a payable function
+   * like `VeriChainMarketplace.buy`. Do NOT pre-convert this to tinybars
+   * yourself; Hedera's relay handles that at the transaction level. What the
+   * *contract* sees as `msg.value` is a separate, smaller-scale figure (see
+   * `HEDERA_TINYBARS_PER_HBAR` in `@verichain/shared` and
+   * `services/hedera/src/consumer.ts`) — this field is the transaction
+   * value, not the contract-visible one.
+   */
+  value?: bigint;
+  /**
+   * Explicit gas limit. Defaults to the same flat 2,000,000 this module has
+   * always used for every write — confirmed necessary because Hedera's
+   * `eth_estimateGas` under-provisions for at least one real contract call
+   * path (see CONSUMER_BACKEND_PLAN.md's live-testing notes). Override only
+   * for a call known to need more.
+   */
+  gas?: bigint;
 };
 
 export type ContractCallResult =
@@ -173,6 +192,7 @@ export async function sendContractCall(
         to: input.address,
         data,
         account: account.address,
+        ...(input.value !== undefined ? { value: input.value } : {}),
       });
     } catch (callError) {
       return revertFromUnknown(callError, input.abi);
@@ -187,7 +207,8 @@ export async function sendContractCall(
       to: input.address,
       data,
       type: "legacy",
-      gas: 2_000_000n,
+      gas: input.gas ?? 2_000_000n,
+      ...(input.value !== undefined ? { value: input.value } : {}),
     });
   } catch (error) {
     return { ok: false, revertReason: await revertReason(error) };

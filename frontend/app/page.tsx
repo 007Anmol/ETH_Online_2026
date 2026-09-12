@@ -45,7 +45,7 @@ export default function Home() {
 
               <a
                 href="/login"
-                className="hidden h-9 items-center rounded-full bg-[var(--foreground)] px-4 text-xs font-medium text-[var(--background)] transition-opacity hover:opacity-85 sm:flex"
+                className="btn-accent hidden h-9 items-center rounded-full px-4 text-xs font-medium sm:flex"
               >
                 Enter platform
               </a>
@@ -82,7 +82,7 @@ export default function Home() {
 
             <a
               href="/login"
-              className="mt-10 inline-flex h-12 items-center rounded-full bg-[var(--foreground)] px-7 text-sm font-medium text-[var(--background)] transition-opacity hover:opacity-85"
+              className="btn-accent mt-10 inline-flex h-12 items-center rounded-full px-7 text-sm font-medium"
             >
               Enter the platform
             </a>

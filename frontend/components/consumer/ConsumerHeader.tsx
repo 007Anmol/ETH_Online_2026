@@ -14,6 +14,7 @@ import { useConsumerIdentity } from "@/lib/consumer/hooks/use-consumer-identity"
 const NAV_LINKS = [
   { href: "/consumer", label: "Home" },
   { href: "/consumer/products", label: "My products" },
+  { href: "/consumer/hedera-marketplace", label: "Marketplace" },
   { href: "/consumer/profile", label: "Profile" },
 ];
 

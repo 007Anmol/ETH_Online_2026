@@ -8,6 +8,7 @@ type ReconcileBody = {
   productId?: string;
   productIdHash?: `0x${string}`;
   txHash?: `0x${string}`;
+  idempotencyKey?: string;
 };
 
 /**
@@ -23,9 +24,27 @@ export async function POST(request: Request) {
 
   const parsed = await readJson<ReconcileBody>(request);
   if (!parsed.ok) return json({ error: "Invalid JSON body" }, 400);
-  const { productId, productIdHash, txHash } = parsed.body;
+  const { productId, productIdHash, txHash, idempotencyKey } = parsed.body;
   if (!productId || !productIdHash || !txHash) {
     return json({ error: "productId, productIdHash, and txHash are required" }, 400);
+  }
+
+  const supabaseForIdempotency = createServiceClient();
+  if (idempotencyKey) {
+    const { data: existingSettlement } = await supabaseForIdempotency
+      .from("resale_settlements")
+      .select("id, status, sync_status")
+      .eq("idempotency_key", idempotencyKey)
+      .maybeSingle();
+    if (existingSettlement) {
+      // Retried reconcile for the same purchase attempt — return the
+      // existing settlement instead of re-verifying/re-inserting.
+      return json({
+        verified: existingSettlement.status === "COMPLETED",
+        synced: existingSettlement.sync_status === "SYNCED",
+        idempotent: true,
+      });
+    }
   }
 
   console.log(
@@ -81,7 +100,7 @@ export async function POST(request: Request) {
     }),
   );
 
-  const supabase = createServiceClient();
+  const supabase = supabaseForIdempotency;
 
   const { data: listingRow } = await supabase
     .from("resale_listings")
@@ -131,6 +150,7 @@ export async function POST(request: Request) {
       status: "COMPLETED",
       chain_tx_hash: txHash,
       sync_status: "SYNCED",
+      idempotency_key: idempotencyKey ?? null,
     });
     if (settlementError) synced = false;
   }

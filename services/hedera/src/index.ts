@@ -26,6 +26,7 @@ export {
   getConsumerNftOwner,
   getOnChainListing,
   hbarToTinybars,
+  isMarketplaceApproved,
   hbarToTransactionValue,
   mintConsumerNftOnChain,
   setProductBlockedOnChain,

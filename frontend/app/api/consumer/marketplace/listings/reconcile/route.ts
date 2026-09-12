@@ -54,6 +54,21 @@ export async function POST(request: Request) {
   );
 
   const supabase = createServiceClient();
+
+  // Idempotent: resale_listings has no idempotency_key column (no migration
+  // for it was applied), so re-running reconcile for the same on-chain
+  // listing is made safe by checking for an existing INITIATED row first,
+  // rather than inserting a duplicate index row for the one real listing.
+  const { data: existingListing } = await supabase
+    .from("resale_listings")
+    .select("id")
+    .eq("product_id", productId)
+    .eq("status", "INITIATED")
+    .maybeSingle();
+  if (existingListing) {
+    return json({ verified: true, synced: true, listingId: existingListing.id, idempotent: true });
+  }
+
   const { data: listing, error: insertError } = await supabase
     .from("resale_listings")
     .insert({

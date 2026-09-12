@@ -97,6 +97,15 @@ export async function mintConsumerNftOnChain(input: {
   return { txHash: result.txHash };
 }
 
+export async function isMarketplaceApproved(ownerAddress: Address): Promise<boolean> {
+  return (await publicClient().readContract({
+    address: HEDERA_CONSUMER_NFT_ADDRESS as Address,
+    abi: consumerNftAbi,
+    functionName: "isApprovedForAll",
+    args: [ownerAddress, HEDERA_CONSUMER_MARKETPLACE_ADDRESS],
+  })) as boolean;
+}
+
 export async function getConsumerNftOwner(productIdHash: `0x${string}`): Promise<Address | null> {
   try {
     const owner = await publicClient().readContract({

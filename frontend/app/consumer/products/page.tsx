@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ProductCollectionGrid } from "@/components/consumer/products/ProductCollectionGrid";
+import { HederaProductsSection } from "@/components/consumer/products/HederaProductsSection";
 import { RevealGroup } from "@/components/consumer/RevealGroup";
 import { BackgroundAmbient } from "@/components/consumer/BackgroundAmbient";
 
@@ -28,6 +29,8 @@ export default function ConsumerProductsPage() {
       <div className="mt-10">
         <ProductCollectionGrid />
       </div>
+
+      <HederaProductsSection />
     </div>
   );
 }

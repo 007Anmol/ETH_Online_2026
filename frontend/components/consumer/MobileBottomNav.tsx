@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Package, ScanLine, User, type LucideIcon } from "lucide-react";
+import { Home, Package, ScanLine, Store, User, type LucideIcon } from "lucide-react";
 
 type NavItem = {
   href: string;
@@ -13,8 +13,9 @@ type NavItem = {
 
 const ITEMS: NavItem[] = [
   { href: "/consumer", label: "Home", icon: Home },
-  { href: "/consumer/scan", label: "Scan", icon: ScanLine, emphasized: true },
   { href: "/consumer/products", label: "Products", icon: Package },
+  { href: "/consumer/scan", label: "Scan", icon: ScanLine, emphasized: true },
+  { href: "/consumer/hedera-marketplace", label: "Market", icon: Store },
   { href: "/consumer/profile", label: "Profile", icon: User },
 ];
 

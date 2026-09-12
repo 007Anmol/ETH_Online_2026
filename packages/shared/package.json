@@ -5,6 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./index.ts",
-    "./abi/VeriChainRegistry.json": "./abi/VeriChainRegistry.json"
+    "./abi/VeriChainRegistry.json": "./abi/VeriChainRegistry.json",
+    "./abi/VeriChainConsumerNFT.json": "./abi/VeriChainConsumerNFT.json",
+    "./abi/VeriChainMarketplace.json": "./abi/VeriChainMarketplace.json"
   }
 }

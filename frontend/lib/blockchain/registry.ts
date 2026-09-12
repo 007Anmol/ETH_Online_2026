@@ -1,6 +1,7 @@
 import type { Account, Address, Hex, WalletClient } from "viem";
 import { publicClient } from "./clients";
 import { getRegistryAddress, registryAbi } from "./contracts";
+import { sendHederaWalletCall } from "./hederaTx";
 import { deriveNonceHash, deriveOnChainId, normalizeTagUid } from "./hashes";
 import {
   BatchStatus,
@@ -89,16 +90,12 @@ async function writeRegistry(
   functionName: string,
   args: readonly unknown[],
 ): Promise<Hex> {
-  const account = walletClient.account;
-  const hash = await walletClient.writeContract({
+  return sendHederaWalletCall(walletClient, {
     address: getRegistryAddress(),
     abi: registryAbi,
     functionName,
     args,
-    account,
-    chain: walletClient.chain,
   });
-  return hash;
 }
 
 /**
@@ -108,13 +105,17 @@ async function writeRegistry(
 export async function createBatchOnChain(
   walletClient: WriteClient,
   input: { batchCode: string; quantity: number },
-): Promise<{ txHash: Hex; batchIdHash: Hex32 }> {
+): Promise<{ txHash: Hex; batchIdHash: Hex32; alreadyExisted: boolean }> {
   const batchIdHash = deriveOnChainId(input.batchCode);
+  const existing = await readBatch(batchIdHash);
+  if (existing.exists) {
+    return { txHash: ZERO_BYTES32, batchIdHash, alreadyExisted: true };
+  }
   const txHash = await writeRegistry(walletClient, "createBatch", [
     batchIdHash,
     input.quantity,
   ]);
-  return { txHash, batchIdHash };
+  return { txHash, batchIdHash, alreadyExisted: false };
 }
 
 export async function mintBatchOnChain(
@@ -123,10 +124,34 @@ export async function mintBatchOnChain(
 ): Promise<{ txHash: Hex; batchIdHash: Hex32; productIdHashes: Hex32[] }> {
   const batchIdHash = deriveOnChainId(input.batchCode);
   const productIdHashes = input.productCodes.map((code) => deriveOnChainId(code));
+  const batch = await readBatch(batchIdHash);
+  if (!batch.exists) {
+    throw new Error(`Batch "${input.batchCode}" does not exist on Hedera. Create it first.`);
+  }
+  const remaining = batch.quantity - batch.mintedCount;
+  if (productIdHashes.length > remaining) {
+    throw new Error(
+      `OverMint: batch "${input.batchCode}" has ${remaining} remaining of ${batch.quantity}.`,
+    );
+  }
+  for (let i = 0; i < input.productCodes.length; i++) {
+    const existing = await readProduct(productIdHashes[i]);
+    if (existing.exists) {
+      throw new Error(
+        `ProductAlreadyMinted: "${input.productCodes[i]}" already exists on VeriChainRegistry. Product hashes are global — use a new product code.`,
+      );
+    }
+  }
   const txHash = await writeRegistry(walletClient, "mintBatch", [
     batchIdHash,
     productIdHashes,
   ]);
+  const confirmed = await readProduct(productIdHashes[0]);
+  if (!confirmed.exists) {
+    throw new Error(
+      `Mint transaction ${txHash} did not create the product on Hedera. Supabase was not updated.`,
+    );
+  }
   return { txHash, batchIdHash, productIdHashes };
 }
 
@@ -136,6 +161,19 @@ export async function bindTagOnChain(
 ): Promise<{ txHash: Hex; productIdHash: Hex32; tagIdHash: Hex32 }> {
   const productIdHash = deriveOnChainId(input.productCode);
   const tagIdHash = deriveOnChainId(normalizeTagUid(input.tagUid));
+  const product = await readProduct(productIdHash);
+  if (!product.exists) {
+    throw new Error(`Product "${input.productCode}" is not minted on Hedera. Mint it before binding a tag.`);
+  }
+  if (isTagBound(product)) {
+    throw new Error(`Product "${input.productCode}" already has an NFC tag bound.`);
+  }
+  const tag = await readTag(tagIdHash);
+  if (tag.exists && tag.status === TagStatus.Bound) {
+    throw new Error(
+      `Tag "${normalizeTagUid(input.tagUid)}" is already bound to another product. Use a new unused tag UID.`,
+    );
+  }
   const txHash = await writeRegistry(walletClient, "bindTag", [productIdHash, tagIdHash]);
   return { txHash, productIdHash, tagIdHash };
 }

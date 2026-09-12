@@ -122,4 +122,22 @@ export const legacySupplyChainAbi = [
       { name: "receiver", type: "address", indexed: false },
     ],
   },
+  {
+    type: "event",
+    name: "CustodyTransferred",
+    inputs: [
+      { name: "productId", type: "uint256", indexed: true },
+      { name: "from", type: "address", indexed: true },
+      { name: "to", type: "address", indexed: true },
+    ],
+  },
+  {
+    type: "event",
+    name: "ShipmentReceived",
+    inputs: [
+      { name: "shipmentId", type: "uint256", indexed: true },
+      { name: "productId", type: "uint256", indexed: true },
+      { name: "receiver", type: "address", indexed: true },
+    ],
+  },
 ] as const;

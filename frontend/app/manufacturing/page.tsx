@@ -22,6 +22,7 @@ import {
   hasBrowserSupabaseConfig,
 } from "@/lib/supabase";
 import type { ManufacturerPermission } from "@/lib/blockchain/types";
+import { DEMO_PRODUCT } from "@/lib/demoProduct";
 
 type Mode = "createBatch" | "mintBatch" | "bindTag" | "lookup";
 
@@ -43,17 +44,30 @@ async function fetchWalletAccess(wallet: string, permission: ManufacturerPermiss
   };
 }
 
+async function syncProductRecord(body: Record<string, unknown>) {
+  const res = await fetch("/api/products/sync", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const payload = (await res.json().catch(() => ({}))) as { error?: string } & Record<string, unknown>;
+  if (!res.ok) {
+    throw new Error(payload.error || "Supabase product sync failed");
+  }
+  return payload;
+}
+
 export default function ManufacturingPage() {
   const { address: connectedAddress, isConnected, chainId } = useAccount();
   const { data: walletClient } = useWalletClient();
   const { switchChain, isPending: isSwitching } = useSwitchChain();
   const onHedera = chainId === hedera.id;
   const [mode, setMode] = useState<Mode>("createBatch");
-  const [batchCode, setBatchCode] = useState("RADO-2026-001");
+  const [batchCode, setBatchCode] = useState(DEMO_PRODUCT.batchCode);
   const [quantity, setQuantity] = useState("1");
-  const [productCodes, setProductCodes] = useState("VC-RADO2026001-000001");
-  const [productCode, setProductCode] = useState("VC-RADO2026001-000001");
-  const [tagUid, setTagUid] = useState("04DEADBEEF01");
+  const [productCodes, setProductCodes] = useState(DEMO_PRODUCT.productCode);
+  const [productCode, setProductCode] = useState(DEMO_PRODUCT.productCode);
+  const [tagUid, setTagUid] = useState(DEMO_PRODUCT.tagUid);
   const [message, setMessage] = useState("");
   const [authMessage, setAuthMessage] = useState("");
   const [canWrite, setCanWrite] = useState(false);
@@ -151,11 +165,22 @@ export default function ManufacturingPage() {
           setMessage("Quantity must be a positive integer.");
           return;
         }
-        const { txHash, batchIdHash } = await createBatchOnChain(
+        const { txHash, batchIdHash, alreadyExisted } = await createBatchOnChain(
           { ...walletClient, account: walletClient.account! },
           { batchCode, quantity: qty },
         );
-        setMessage(`Batch created. hash=${batchIdHash} tx=${txHash}`);
+        const synced = await syncProductRecord({
+          action: "createBatch",
+          wallet: connectedAddress,
+          batchCode,
+          quantity: qty,
+          txHash,
+        });
+        setMessage(
+          alreadyExisted
+            ? `Batch already on Hedera. Synced to Supabase so you can mint.\nhash=${batchIdHash}\n${JSON.stringify(synced.batch ?? {}, null, 2)}`
+            : `Batch created and synced to Supabase.\nhash=${batchIdHash}\ntx=${txHash}\n${JSON.stringify(synced.batch ?? {}, null, 2)}`,
+        );
         return;
       }
 
@@ -172,7 +197,16 @@ export default function ManufacturingPage() {
           { ...walletClient, account: walletClient.account! },
           { batchCode, productCodes: codes },
         );
-        setMessage(`Minted ${productIdHashes.length} products. tx=${txHash}`);
+        const synced = await syncProductRecord({
+          action: "mintBatch",
+          wallet: connectedAddress,
+          batchCode,
+          productCodes: codes,
+          txHash,
+        });
+        setMessage(
+          `Minted ${productIdHashes.length} products and wrote Supabase rows.\ntx=${txHash}\n${JSON.stringify(synced.products ?? [], null, 2)}`,
+        );
         return;
       }
 
@@ -181,7 +215,14 @@ export default function ManufacturingPage() {
           { ...walletClient, account: walletClient.account! },
           { productCode, tagUid },
         );
-        setMessage(`Tag bound. product=${productIdHash} tag=${tagIdHash} tx=${txHash}`);
+        const synced = await syncProductRecord({
+          action: "bindTag",
+          wallet: connectedAddress,
+          productCode,
+          tagUid,
+          txHash,
+        });
+        setMessage(`Tag bound and synced.\nproduct=${productIdHash}\ntag=${tagIdHash}\ntx=${txHash}\n${JSON.stringify(synced, null, 2)}`);
         return;
       }
 
@@ -217,8 +258,8 @@ export default function ManufacturingPage() {
             <p className="text-[10px] uppercase tracking-[0.2em] text-gray-400">Manufacturing</p>
             <h1 className="mt-2 text-3xl font-semibold tracking-tight">Team 1 Registry</h1>
             <p className="mt-2 text-sm text-gray-500">
-              Batch / mint / NFC bind against VeriChainRegistry. Authorization comes from Supabase
-              role_permissions; on-chain writes still require the registry owner.
+              Fresh product: {DEMO_PRODUCT.batchCode} / {DEMO_PRODUCT.productCode} / tag {DEMO_PRODUCT.tagUid}.
+              Create batch, mint, bind tag, then register logistics id {DEMO_PRODUCT.logisticsId}.
             </p>
 
             <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-gray-500">

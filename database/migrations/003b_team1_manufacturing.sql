@@ -7,7 +7,7 @@ create table if not exists batches (
   batch_id_hash text not null unique,
   manufacturer_org_id uuid not null references organizations(id) on delete restrict,
   product_name text not null,
-  product_category text,
+  product_category text not null default 'WATCHES',
   plant_id text not null,
   manufacturing_date date not null,
   expiry_date date,

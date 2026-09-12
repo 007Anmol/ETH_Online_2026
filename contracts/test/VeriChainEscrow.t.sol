@@ -114,6 +114,8 @@ contract VeriChainEscrowTest is Test {
                 payee
             );
 
+        registry.setProductStatus(productId, 2);
+
         uint256 payeeBalanceBefore =
             payee.balance;
 
@@ -146,6 +148,59 @@ contract VeriChainEscrowTest is Test {
 
         vm.expectRevert("Product flagged");
 
+        escrow.releaseEscrow(escrowId);
+    }
+
+    function testPayerCanReleaseWhenDelivered() public {
+        vm.prank(payer);
+
+        uint256 escrowId =
+            escrow.createEscrow{value: escrowAmount}(
+                productId,
+                payee
+            );
+
+        registry.setProductStatus(productId, 2);
+
+        uint256 payeeBalanceBefore = payee.balance;
+
+        vm.prank(payer);
+        escrow.releaseEscrow(escrowId);
+
+        assertEq(payee.balance, payeeBalanceBefore + escrowAmount);
+        assertEq(
+            uint8(escrow.getEscrowStatus(escrowId)),
+            uint8(VeriChainEscrow.EscrowStatus.RELEASED)
+        );
+    }
+
+    function testCannotReleaseBeforeReceived() public {
+        vm.prank(payer);
+
+        uint256 escrowId =
+            escrow.createEscrow{value: escrowAmount}(
+                productId,
+                payee
+            );
+
+        vm.prank(payer);
+        vm.expectRevert("Product not received");
+        escrow.releaseEscrow(escrowId);
+    }
+
+    function testStrangerCannotRelease() public {
+        vm.prank(payer);
+
+        uint256 escrowId =
+            escrow.createEscrow{value: escrowAmount}(
+                productId,
+                payee
+            );
+
+        registry.setProductStatus(productId, 2);
+
+        vm.prank(attacker);
+        vm.expectRevert("Not authorized");
         escrow.releaseEscrow(escrowId);
     }
 

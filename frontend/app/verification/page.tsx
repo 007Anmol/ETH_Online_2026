@@ -22,10 +22,11 @@ import {
   type OnChainProduct,
   type OnChainTag,
 } from "@/lib/blockchain";
+import { DEMO_PRODUCT } from "@/lib/demoProduct";
 
 export default function VerificationPage() {
-  const [productCode, setProductCode] = useState("VC-RADO2026001-000001");
-  const [tagUid, setTagUid] = useState("04DEADBEEF01");
+  const [productCode, setProductCode] = useState(DEMO_PRODUCT.productCode);
+  const [tagUid, setTagUid] = useState(DEMO_PRODUCT.tagUid);
   const [owner, setOwner] = useState<string>("");
   const [product, setProduct] = useState<OnChainProduct | null>(null);
   const [tag, setTag] = useState<OnChainTag | null>(null);

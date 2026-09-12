@@ -2,13 +2,15 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { CircleDollarSign, ExternalLink, LockKeyhole, RefreshCw, ShieldCheck, ShieldAlert } from "lucide-react";
-import { isAddress, parseEther } from "viem";
-import { useAccount, useReadContract, useWriteContract } from "wagmi";
+import { isAddress, parseEther, formatEther } from "viem";
+import { useAccount, useReadContract } from "wagmi";
 
 import Sidebar from "@/components/team2/Sidebar";
 import Topbar from "@/components/team2/Topbar";
 import StatusBadge from "@/components/team2/StatusBadge";
 import { CONTRACTS } from "@/lib/contracts";
+import { hashscanTx } from "@/lib/blockchain/explorer";
+import { useHederaWrite } from "@/lib/blockchain/useHederaWrite";
 import { escrowAbi } from "@/lib/escrowAbi";
 import { hookAbi } from "@/lib/hookAbi";
 import {
@@ -16,6 +18,7 @@ import {
   saveEscrowRecord,
   type EscrowRecord as DbEscrowRecord,
 } from "@/lib/supabase";
+import { DEMO_PRODUCT } from "@/lib/demoProduct";
 
 const escrowStatuses = ["ACTIVE", "FROZEN", "RELEASED"] as const;
 
@@ -26,7 +29,7 @@ export default function EscrowPage() {
   const [mounted, setMounted] = useState(false);
   const [payee, setPayee] = useState("");
   const [amount, setAmount] = useState("0.1");
-  const [productId, setProductId] = useState("1");
+  const [productId, setProductId] = useState(DEMO_PRODUCT.logisticsId);
   const [message, setMessage] = useState("");
   const [dbEscrows, setDbEscrows] = useState<DbEscrowRecord[]>([]);
   const [isLoadingDb, setIsLoadingDb] = useState(false);
@@ -52,7 +55,7 @@ export default function EscrowPage() {
     args: [BigInt(productId), escrowId],
   });
 
-  const { writeContract, isPending } = useWriteContract();
+  const { writeHederaContract, isPending } = useHederaWrite();
   const record = escrow as ContractEscrowRecord | undefined;
   const exists = Boolean(record && record[3] > 0n);
   const status = record ? escrowStatuses[record[4]] ?? "UNKNOWN" : "EMPTY";
@@ -82,7 +85,7 @@ export default function EscrowPage() {
     if (!isConnected) return setMessage("Connect a Hedera wallet first.");
     if (!isAddress(payee)) return setMessage("Enter a valid payee address.");
 
-    writeContract(
+    void writeHederaContract(
       {
         address: CONTRACTS.escrow,
         abi: escrowAbi,
@@ -117,7 +120,7 @@ export default function EscrowPage() {
 
   const action = (functionName: "freezeEscrowPool" | "resolveEscrow" | "releaseEscrow") => {
     const isPoolAction = functionName === "freezeEscrowPool";
-    writeContract(
+    void writeHederaContract(
       {
         address: CONTRACTS.escrow,
         abi: escrowAbi,
@@ -196,7 +199,7 @@ export default function EscrowPage() {
                   <>
                     <div className="mt-8 grid gap-5 sm:grid-cols-3">
                       <Detail label="Product" value={`#${record[0].toString()}`} />
-                      <Detail label="Amount" value={`${record[3].toString()} wei`} />
+                      <Detail label="Amount" value={exists && record ? `${formatEther(record[3])} HBAR` : "—"} />
                       <div>
                         <p className="text-[10px] uppercase tracking-wider text-gray-400">Uniswap v4 Hook</p>
                         <div className="mt-2 flex items-center gap-1.5">
@@ -298,10 +301,15 @@ export default function EscrowPage() {
                           </td>
                           <td className="py-3 font-mono text-[11px]">
                             {e.chain_tx_hash ? (
-                              <span className="flex items-center gap-1 text-gray-600">
+                              <a
+                                href={hashscanTx(e.chain_tx_hash)}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex items-center gap-1 text-gray-600 underline"
+                              >
                                 {e.chain_tx_hash.slice(0, 10)}...
                                 <ExternalLink size={10} />
-                              </span>
+                              </a>
                             ) : (
                               <span className="text-gray-300">—</span>
                             )}

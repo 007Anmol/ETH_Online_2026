@@ -57,6 +57,10 @@ export const config = createConfig({
   chains: [hedera],
   connectors: [injected()],
   transports: {
-    [hedera.id]: http(rpcUrl),
+    [hedera.id]: http(rpcUrl, {
+      batch: false,
+      retryCount: 3,
+      timeout: 60_000,
+    }),
   },
 });

@@ -8,68 +8,68 @@ import {
   useAccount,
   useReadContract,
   useWaitForTransactionReceipt,
-  useWriteContract,
 } from "wagmi";
 
 import Sidebar from "@/components/team2/Sidebar";
 import Topbar from "@/components/team2/Topbar";
 import StatusBadge from "@/components/team2/StatusBadge";
 import { CONTRACTS } from "@/lib/contracts";
-import { deriveOnChainId } from "@/lib/blockchain";
+import { deriveOnChainId, isTagBound, readProduct } from "@/lib/blockchain";
+import { PRODUCT_STATUS } from "@/lib/blockchain/explorer";
+import { findLatestShipmentForProduct, type OnChainShipment } from "@/lib/blockchain/supplyChainReads";
+import { useHederaWrite } from "@/lib/blockchain/useHederaWrite";
 import { legacySupplyChainAbi } from "@/lib/team2/legacySupplyChainAbi";
-
-/** Team 2 supply-chain contract boundary (not Team 1 identity registry). */
-const supplyChainAddress = CONTRACTS.supplyChain;
 import {
   createShipmentRecord,
   fetchShipments,
   updateShipmentRecord,
   type ShipmentRecord as DbShipmentRecord,
 } from "@/lib/supabase";
+import { DEMO_PRODUCT } from "@/lib/demoProduct";
+
+/** Team 2 supply-chain contract boundary (not Team 1 identity registry). */
+const supplyChainAddress = CONTRACTS.supplyChain;
 
 const shipmentStatuses = ["CREATED", "IN_TRANSIT", "RECEIVED", "CANCELLED"] as const;
-
-type ContractShipmentRecord = readonly [
-  bigint,
-  bigint,
-  `0x${string}`,
-  `0x${string}`,
-  number,
-  boolean,
-];
 
 export default function ShipmentsPage() {
   const { address: userAddress, isConnected } = useAccount();
   const [mounted, setMounted] = useState(false);
-  const [productId, setProductId] = useState("1");
-  const [team1ProductCode, setTeam1ProductCode] = useState("VC-RADO2026001-000001");
+  const [productId, setProductId] = useState(DEMO_PRODUCT.logisticsId);
+  const [team1ProductCode, setTeam1ProductCode] = useState(DEMO_PRODUCT.productCode);
   const [receiver, setReceiver] = useState("");
   const [message, setMessage] = useState("");
   const [dbShipments, setDbShipments] = useState<DbShipmentRecord[]>([]);
   const [isLoadingDb, setIsLoadingDb] = useState(false);
+  const [matchedShipment, setMatchedShipment] = useState<OnChainShipment | null>(null);
 
+  const { data: logistics, refetch: refetchProduct } = useReadContract({
+    address: supplyChainAddress,
+    abi: legacySupplyChainAbi,
+    functionName: "products",
+    args: [BigInt(productId || "0")],
+    query: { enabled: Boolean(supplyChainAddress) && Boolean(productId) },
+  });
   const { data: nextShipmentId } = useReadContract({
     address: supplyChainAddress,
     abi: legacySupplyChainAbi,
     functionName: "nextShipmentId",
     query: { enabled: Boolean(supplyChainAddress) },
   });
-  const shipmentId = nextShipmentId && nextShipmentId > 1n ? nextShipmentId - 1n : 1n;
 
-  const { data: shipment, refetch } = useReadContract({
-    address: supplyChainAddress,
-    abi: legacySupplyChainAbi,
-    functionName: "shipments",
-    args: [shipmentId],
-    query: { enabled: Boolean(supplyChainAddress) },
-  });
-
-  const { writeContract, data: transactionHash, isPending } = useWriteContract();
+  const { writeHederaContract, data: transactionHash, isPending } = useHederaWrite();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash: transactionHash });
 
-  const record = shipment as ContractShipmentRecord | undefined;
+  const record = matchedShipment;
   const shipmentExists = record?.[5] === true;
   const status = record ? shipmentStatuses[record[4]] ?? "UNKNOWN" : "EMPTY";
+  const shipmentId = record?.[0] ?? 0n;
+  const logisticsProduct = logistics as readonly [`0x${string}`, `0x${string}`, number, boolean] | undefined;
+  const productExists = logisticsProduct?.[3] === true;
+  const currentCustodian = productExists ? logisticsProduct[1] : undefined;
+  const productStatus = logisticsProduct ? PRODUCT_STATUS[logisticsProduct[2]] ?? "UNKNOWN" : "MISSING";
+  const inTransit = logisticsProduct?.[2] === 1;
+  const received = shipmentExists && status === "RECEIVED";
 
   const loadDbShipments = async () => {
     setIsLoadingDb(true);
@@ -83,6 +83,19 @@ export default function ShipmentsPage() {
     }
   };
 
+  const loadMatchedShipment = async () => {
+    try {
+      const token = BigInt(productId || "0");
+      if (token <= 0n) {
+        setMatchedShipment(null);
+        return;
+      }
+      setMatchedShipment(await findLatestShipmentForProduct(token));
+    } catch {
+      setMatchedShipment(null);
+    }
+  };
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -92,22 +105,14 @@ export default function ShipmentsPage() {
   }, []);
 
   useEffect(() => {
+    void loadMatchedShipment();
+  }, [productId, transactionHash]);
+
+  useEffect(() => {
     if (isSuccess && transactionHash) {
-      void refetch();
-      // Sync on-chain confirmation to Supabase
-      if (record && shipmentExists) {
-        createShipmentRecord({
-          id: record[0].toString(),
-          on_chain_shipment_id: record[0].toString(),
-          product_id: record[1].toString(),
-          status: shipmentStatuses[record[4]] ?? "CREATED",
-          chain_tx_hash: transactionHash,
-        })
-          .catch(() => {})
-          .finally(() => {
-            void loadDbShipments();
-          });
-      }
+      void loadMatchedShipment();
+      void refetchProduct();
+      void loadDbShipments();
     }
   }, [isSuccess, transactionHash]);
 
@@ -125,7 +130,7 @@ export default function ShipmentsPage() {
       return;
     }
 
-    writeContract(
+    void writeHederaContract(
       {
         address: supplyChainAddress,
         abi: legacySupplyChainAbi,
@@ -134,8 +139,7 @@ export default function ShipmentsPage() {
       },
       {
         onSuccess: (hash) => {
-          setMessage(`Shipment submitted. Tx: ${hash.slice(0, 10)}...`);
-          // Optimistically store record
+          setMessage("Sent. Owner does not change until the receiver clicks I received it.");
           if (nextShipmentId && userAddress) {
             createShipmentRecord({
               id: nextShipmentId.toString(),
@@ -143,10 +147,18 @@ export default function ShipmentsPage() {
               product_id: productId,
               sender_org_id: userAddress,
               receiver_org_id: receiver,
-              status: "CREATED",
+              status: "IN_TRANSIT",
               chain_tx_hash: hash,
             }).catch(() => {});
           }
+          void fetch("/api/products/sync", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ action: "inTransit", tokenId: Number(productId), txHash: hash }),
+          }).finally(() => {
+            void refetchProduct();
+            void loadDbShipments();
+          });
         },
         onError: (error) => setMessage(error.message),
       }
@@ -156,7 +168,7 @@ export default function ShipmentsPage() {
   const acceptShipment = () => {
     if (!record) return;
 
-    writeContract(
+    void writeHederaContract(
       {
         address: supplyChainAddress,
         abi: legacySupplyChainAbi,
@@ -165,15 +177,26 @@ export default function ShipmentsPage() {
       },
       {
         onSuccess: (hash) => {
-          setMessage(`Shipment acceptance submitted. Tx: ${hash.slice(0, 10)}...`);
+          setMessage("Received. This wallet is now the owner. You can send it again, or go to Sale.");
           updateShipmentRecord(record[0].toString(), {
             status: "RECEIVED",
             chain_tx_hash: hash,
-          })
-            .catch(() => {})
-            .finally(() => {
-              void loadDbShipments();
-            });
+          }).catch(() => {});
+          void fetch("/api/products/sync", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              action: "ownership",
+              tokenId: Number(record[1]),
+              from: record[2],
+              to: userAddress,
+              txHash: hash,
+              leg: "logistics",
+            }),
+          }).finally(() => {
+            void refetchProduct();
+            void loadDbShipments();
+          });
         },
         onError: (error) => setMessage(error.message),
       }
@@ -194,7 +217,27 @@ export default function ShipmentsPage() {
     }
 
     const team1Hash = deriveOnChainId(team1ProductCode);
-    writeContract(
+    void (async () => {
+      try {
+        const identity = await readProduct(team1Hash);
+        if (!identity.exists) {
+          setMessage(
+            `Team 1 product "${team1ProductCode}" is not minted. Mint it on Manufacturing first.`,
+          );
+          return;
+        }
+        if (!isTagBound(identity)) {
+          setMessage(
+            `Team 1 tag not bound for "${team1ProductCode}". Open Manufacturing → Bind NFC tag with an unused tag UID, then register again.`,
+          );
+          return;
+        }
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : "Team 1 lookup failed");
+        return;
+      }
+
+      void writeHederaContract(
       {
         address: supplyChainAddress,
         abi: legacySupplyChainAbi,
@@ -202,11 +245,35 @@ export default function ShipmentsPage() {
         args: [BigInt(productId), team1Hash, userAddress],
       },
       {
-        onSuccess: (hash) =>
-          setMessage(`Linked Team 1 ${team1ProductCode} → logistics #${productId}. Tx: ${hash.slice(0, 10)}...`),
+        onSuccess: async (hash) => {
+          try {
+            const synced = await fetch("/api/products/sync", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({
+                action: "linkLogistics",
+                productCode: team1ProductCode,
+                tokenId: Number(productId),
+                txHash: hash,
+                custodian: userAddress,
+              }),
+            });
+            const body = (await synced.json().catch(() => ({}))) as { error?: string; product?: { token_id?: number } };
+            if (!synced.ok) {
+              setMessage(`On-chain link submitted (${hash.slice(0, 10)}...) but Supabase sync failed: ${body.error}`);
+              return;
+            }
+            setMessage(
+              `Linked ${team1ProductCode} → logistics #${productId} and set products.token_id=${body.product?.token_id}. Tx: ${hash}`,
+            );
+          } catch (error) {
+            setMessage(error instanceof Error ? error.message : "Logistics link sync failed");
+          }
+        },
         onError: (error) => setMessage(error.message),
       },
     );
+    })();
   };
 
   return (
@@ -218,27 +285,40 @@ export default function ShipmentsPage() {
           <main className="mx-auto max-w-350 p-6 lg:p-10">
             <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
               <div>
-                <p className="text-[10px] uppercase tracking-[0.2em] text-gray-400">Operations</p>
-                <h1 className="mt-2 text-3xl font-semibold tracking-tight">Shipments</h1>
-                <p className="mt-2 text-sm text-gray-500">Live smart contract custody operations synced to Supabase.</p>
+                <p className="text-[10px] uppercase tracking-[0.2em] text-gray-400">No payment</p>
+                <h1 className="mt-2 text-3xl font-semibold tracking-tight">Logistics</h1>
+                <p className="mt-2 max-w-2xl text-sm text-gray-500">
+                  Send the product to a distributor, then another, then a retailer. The owner only changes when the
+                  receiver clicks I received it. Repeat as many times as you want.
+                </p>
               </div>
               <div className="flex items-center gap-3">
-                <button
-                  onClick={loadDbShipments}
-                  className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-600 hover:border-black"
-                >
-                  <RefreshCw size={12} className={isLoadingDb ? "animate-spin" : ""} />
-                  Sync DB
-                </button>
+                <Link href={`/product/${productId}`} className="text-xs underline">
+                  Product history
+                </Link>
                 <StatusBadge status={mounted && isConnected ? "CONNECTED" : "PENDING"} />
               </div>
             </div>
 
+            <div className="mt-6 rounded-xl border border-gray-200 p-4 text-sm">
+              <p className="text-[10px] uppercase tracking-wider text-gray-400">Who has it now</p>
+              <p className="mt-1 font-mono text-xs">{currentCustodian ?? "Not in logistics yet"}</p>
+              <p className="mt-2 text-xs text-gray-500">
+                {inTransit
+                  ? "Waiting for the receiver to click I received it."
+                  : received
+                    ? "Receiver has it. Current owner can send it to the next person."
+                    : productExists
+                      ? "Ready to send."
+                      : "Register this product once, then send."}
+              </p>
+            </div>
+
             <div className="mt-8 grid gap-6 lg:grid-cols-[360px_1fr]">
               <form onSubmit={registerLogisticsProduct} className="rounded-xl border border-dashed border-gray-300 p-6 lg:col-span-2">
-                <h2 className="text-sm font-semibold">1) Link Team 1 product into Team 2 logistics</h2>
+                <h2 className="text-sm font-semibold">1) Register once</h2>
                 <p className="mt-1 text-xs text-gray-500">
-                  Requires a Team 1 product that already has an NFC tag bound. Owner wallet only.
+                  Use the manufacturer wallet. Product must already be minted and tagged on Manufacturing.
                 </p>
                 <div className="mt-4 grid gap-4 sm:grid-cols-3">
                   <label className="block text-[10px] uppercase tracking-wider text-gray-400">
@@ -271,8 +351,11 @@ export default function ShipmentsPage() {
               <form onSubmit={submitCreate} className="rounded-xl border border-gray-200 p-6">
                 <div className="flex items-center gap-2">
                   <Plus size={15} />
-                  <h2 className="text-sm font-semibold">2) Create shipment</h2>
+                  <h2 className="text-sm font-semibold">2) Send</h2>
                 </div>
+                <p className="mt-2 text-xs text-gray-500">
+                  Connect the current owner. Sending does not change owner until the other wallet clicks I received it.
+                </p>
 
                 <label className="mt-6 block text-[10px] uppercase tracking-wider text-gray-400">Product ID</label>
                 <input
@@ -282,20 +365,20 @@ export default function ShipmentsPage() {
                   inputMode="numeric"
                 />
 
-                <label className="mt-4 block text-[10px] uppercase tracking-wider text-gray-400">Receiver wallet</label>
+                <label className="mt-4 block text-[10px] uppercase tracking-wider text-gray-400">Send to this wallet</label>
                 <input
                   value={receiver}
                   onChange={(event) => setReceiver(event.target.value)}
-                  placeholder="0x..."
+                  placeholder="Distributor, retailer, or next hop — 0x..."
                   className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 font-mono text-xs outline-none focus:border-black"
                 />
 
                 <button
-                  disabled={isPending || isConfirming}
+                  disabled={isPending || isConfirming || inTransit || !productExists}
                   className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-black px-4 py-3 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <Truck size={14} />
-                  {isPending || isConfirming ? "Confirming..." : "Create shipment"}
+                  {isPending || isConfirming ? "Confirming..." : "Send product"}
                 </button>
 
                 {message && <p className="mt-4 wrap-break-word text-xs text-gray-500">{message}</p>}
@@ -307,21 +390,40 @@ export default function ShipmentsPage() {
                   <div>
                     <p className="text-[10px] uppercase tracking-[0.18em] text-gray-400">Latest on-chain record</p>
                     <h2 className="mt-2 text-xl font-semibold">Shipment #{shipmentId.toString()}</h2>
+                    <Link href={`/product/${productId}`} className="mt-1 inline-block text-xs underline underline-offset-2">
+                      Open product details
+                    </Link>
                   </div>
-                  <StatusBadge status={shipmentExists ? status : "PENDING"} />
+                  <div className="flex flex-col items-end gap-2">
+                    <StatusBadge status={inTransit ? "IN TRANSIT" : received ? "RECEIVED" : shipmentExists ? status : "PENDING"} />
+                    <StatusBadge status={productStatus} />
+                  </div>
                 </div>
 
                 {shipmentExists && record ? (
                   <div className="mt-8 grid gap-5 sm:grid-cols-2">
                     <Detail label="Product" value={`#${record[1].toString()}`} />
-                    <Detail label="Status" value={status} />
-                    <Detail label="Sender" value={record[2]} mono />
-                    <Detail label="Receiver" value={record[3]} mono />
+                    <Detail label="Shipment status" value={inTransit ? "IN TRANSIT" : status} />
+                    <Detail label="Sent from" value={record[2]} mono />
+                    <Detail label="Sent to" value={record[3]} mono />
+                    <Detail
+                      label="Current owner"
+                      value={
+                        received
+                          ? currentCustodian ?? record[3]
+                          : currentCustodian ?? "Still the sender until I received it"
+                      }
+                      mono
+                    />
+                    <Detail label="Payment" value="None on this page. Sale is a separate step." />
                   </div>
                 ) : (
                   <div className="mt-12 flex flex-col items-center justify-center text-center text-gray-400">
                     <Search size={22} />
                     <p className="mt-3 text-sm">No shipment found yet on chain.</p>
+                    {productExists && currentCustodian && (
+                      <p className="mt-2 font-mono text-xs text-gray-500">Current owner: {currentCustodian}</p>
+                    )}
                   </div>
                 )}
 
@@ -331,8 +433,14 @@ export default function ShipmentsPage() {
                     disabled={isPending || isConfirming}
                     className="mt-8 flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-xs font-medium hover:border-black disabled:opacity-40"
                   >
-                    <Check size={14} /> Accept shipment as receiver
+                    <Check size={14} /> I received it
                   </button>
+                )}
+                {received && (
+                  <p className="mt-6 text-xs text-gray-500">
+                    This wallet owns it. Send it again, or go to{" "}
+                    <Link className="underline" href="/settlement">Sale</Link> when a retailer is selling to a buyer.
+                  </p>
                 )}
               </section>
             </div>
@@ -341,8 +449,8 @@ export default function ShipmentsPage() {
             <section className="mt-8 rounded-xl border border-gray-200 p-6">
               <div className="mb-4 flex items-center justify-between">
                 <div>
-                  <h2 className="text-sm font-semibold">Database-backed Shipment History</h2>
-                  <p className="text-xs text-gray-400">Persisted in Supabase PostgreSQL with verified transaction hashes</p>
+                  <h2 className="text-sm font-semibold">Past sends</h2>
+                  <p className="text-xs text-gray-400">Each hop. Owner changes only after I received it.</p>
                 </div>
                 <span className="text-xs text-gray-500">{dbShipments.length} record(s)</span>
               </div>
@@ -388,7 +496,9 @@ export default function ShipmentsPage() {
                             )}
                           </td>
                           <td className="py-3 text-gray-400">
-                            {s.created_at ? new Date(s.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"}
+                            {mounted && s.created_at
+                              ? new Date(s.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                              : "—"}
                           </td>
                         </tr>
                       ))}

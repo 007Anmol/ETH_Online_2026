@@ -124,12 +124,16 @@ contract VeriChainEscrow is Ownable {
 
     function releaseEscrow(
         uint256 escrowId
-    ) external onlyOwner {
+    ) external {
         Escrow storage escrow = escrows[escrowId];
 
         require(
             escrow.status == EscrowStatus.ACTIVE,
             "Escrow not active"
+        );
+        require(
+            msg.sender == escrow.payer || msg.sender == owner(),
+            "Not authorized"
         );
 
         // Product status:
@@ -145,6 +149,10 @@ contract VeriChainEscrow is Ownable {
         require(
             productStatus != 3,
             "Product flagged"
+        );
+        require(
+            productStatus == 2,
+            "Product not received"
         );
 
         escrow.status = EscrowStatus.RELEASED;

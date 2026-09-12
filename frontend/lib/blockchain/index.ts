@@ -4,6 +4,16 @@
  */
 export { config, hedera } from "./wagmi";
 export { publicClient } from "./clients";
+export { hederaFeeOverrides } from "./hederaTx";
+export {
+  ESCROW_STATUS,
+  HASHSCAN_TESTNET,
+  PRODUCT_STATUS,
+  SHIPMENT_STATUS,
+  hashscanAddress,
+  hashscanContract,
+  hashscanTx,
+} from "./explorer";
 export {
   CONTRACTS,
   getRegistryAddress,

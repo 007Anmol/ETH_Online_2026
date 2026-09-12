@@ -3,52 +3,29 @@
 import Link from "next/link";
 import {
   Activity,
-  AlertTriangle,
   Box,
   CircleDollarSign,
   Factory,
+  Handshake,
   LayoutDashboard,
   ScanLine,
-  ShieldCheck,
+  Tag,
   Truck,
 } from "lucide-react";
+import { DEMO_PRODUCT } from "@/lib/demoProduct";
 
 const navigation = [
-  {
-    label: "Overview",
-    href: "/",
-    icon: LayoutDashboard,
-  },
-  {
-    label: "Shipments",
-    href: "/shipments",
-    icon: Truck,
-  },
-  {
-    label: "Manufacturing",
-    href: "/manufacturing",
-    icon: Factory,
-  },
-  {
-    label: "Checkpoints",
-    href: "/checkpoints",
-    icon: Activity,
-  },
-  {
-    label: "Verification",
-    href: "/verification",
-    icon: ScanLine,
-  },
-  {
-    label: "Escrow",
-    href: "/escrow",
-    icon: ShieldCheck,
-  },
-  {
-    label: "Payments",
-    href: "/payments",
-    icon: CircleDollarSign,
-  },
+  { label: "Manufacturing", href: "/manufacturing", icon: Factory },
+  { label: "Logistics", href: "/shipments", icon: Truck },
+  { label: "Sale", href: "/settlement", icon: Handshake },
+  { label: "Product history", href: `/product/${DEMO_PRODUCT.logisticsId}`, icon: Tag },
+];
+
+const extra = [
+  { label: "Overview", href: "/", icon: LayoutDashboard },
+  { label: "Checkpoints", href: "/checkpoints", icon: Activity },
+  { label: "Verification", href: "/verification", icon: ScanLine },
+  { label: "Payments", href: "/payments", icon: CircleDollarSign },
 ];
 
 export default function Sidebar() {
@@ -91,24 +68,21 @@ export default function Sidebar() {
 
         <div className="mt-8 border-t border-gray-200 pt-6">
           <p className="mb-3 px-3 text-[9px] font-semibold uppercase tracking-[0.2em] text-gray-400">
-            Monitoring
+            More
           </p>
-
-          <Link
-            href="#"
-            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-gray-500 transition hover:bg-gray-100 hover:text-black"
-          >
-            <AlertTriangle size={15} />
-            Anomalies
-          </Link>
-
-          <Link
-            href="#"
-            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-gray-500 transition hover:bg-gray-100 hover:text-black"
-          >
-            <Activity size={15} />
-            Activity
-          </Link>
+          {extra.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-gray-500 transition hover:bg-gray-100 hover:text-black"
+              >
+                <Icon size={15} />
+                {item.label}
+              </Link>
+            );
+          })}
         </div>
       </div>
     </aside>

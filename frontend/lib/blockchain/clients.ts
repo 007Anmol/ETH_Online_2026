@@ -10,5 +10,9 @@ const rpcUrl =
 /** Read-only viem client for Team 1 Registry queries. */
 export const publicClient = createPublicClient({
   chain: hedera,
-  transport: http(rpcUrl),
+  transport: http(rpcUrl, {
+    batch: false,
+    retryCount: 3,
+    timeout: 60_000,
+  }),
 });

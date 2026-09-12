@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
-import { getWalletClient } from "@/lib/consumer/chain/hedera-wallet-client";
+import { getSigningWalletClient } from "@/lib/consumer/chain/hedera-wallet-client";
 import type { EthereumWalletLike } from "@/lib/consumer/chain/hedera-wallet-client";
 
 export type HederaSessionStatus = "checking" | "signed_out" | "signing_in" | "signed_in" | "error";
@@ -55,7 +55,7 @@ export function useHederaSession() {
       const challenge = await challengeRes.json();
       if (!challengeRes.ok) throw new Error(challenge.error ?? "Could not start sign-in");
 
-      const walletClient = await getWalletClient(wallet);
+      const walletClient = await getSigningWalletClient(wallet);
       const signature = await walletClient.signMessage({
         account: wallet.address as `0x${string}`,
         message: challenge.message,

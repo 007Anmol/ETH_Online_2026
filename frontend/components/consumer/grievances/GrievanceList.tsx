@@ -23,14 +23,22 @@ export function GrievanceList() {
       .then((body) => setGrievances(body.grievances ?? []));
   }, []);
 
-  if (grievances === null) return <LoadingState label="Loading grievances" />;
+  if (grievances === null) {
+    return (
+      <div className="vc-neon-panel rounded-xl">
+        <LoadingState label="Loading grievances" />
+      </div>
+    );
+  }
   if (grievances.length === 0) {
     return (
-      <EmptyState
-        icon={MessageSquareWarning}
-        title="No grievances filed"
-        description="Report an issue from a product's page to see it here."
-      />
+      <div className="vc-neon-panel rounded-xl">
+        <EmptyState
+          icon={MessageSquareWarning}
+          title="No grievances filed"
+          description="Report an issue from a product's page to see it here."
+        />
+      </div>
     );
   }
 
@@ -40,7 +48,7 @@ export function GrievanceList() {
         <Link
           key={g.id}
           href={`/consumer/hedera-grievances/${g.id}`}
-          className="vc-card flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4"
+          className="vc-card vc-neon-panel flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4"
         >
           <div>
             <p className="font-mono text-xs text-[var(--muted)]">{g.grievance_number}</p>

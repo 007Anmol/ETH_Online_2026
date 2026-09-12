@@ -30,7 +30,7 @@ export function GrievanceDetail({ grievanceId }: { grievanceId: string }) {
   }
 
   return (
-    <div className="vc-card rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
+    <div className="vc-card vc-neon-panel rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
       <div className="flex items-start justify-between">
         <div>
           <p className="font-mono text-xs text-[var(--muted)]">{grievance.grievance_number}</p>

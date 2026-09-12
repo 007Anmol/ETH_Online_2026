@@ -1,6 +1,6 @@
 "use client";
 
-import { createPublicClient, http } from "viem";
+import { createPublicClient, http, WaitForTransactionReceiptTimeoutError } from "viem";
 import { HEDERA_TESTNET } from "@/lib/consumer/chain/hedera-wallet-client";
 
 export type ReceiptOutcome = "CONFIRMED" | "REVERTED" | "TIMED_OUT";
@@ -26,7 +26,12 @@ export async function waitForRealReceipt(
     });
     return receipt.status === "success" ? "CONFIRMED" : "REVERTED";
   } catch (error) {
-    if (error instanceof Error && /timeout/i.test(error.message)) return "TIMED_OUT";
+    // Matching viem's actual error class here, not a message-substring regex
+    // — viem's real message is "Timed out while waiting..." which a naive
+    // /timeout/i check never matches ("Timed" + " out" isn't "timeout"),
+    // so this was silently becoming an uncaught promise rejection instead
+    // of the TIMED_OUT outcome callers already handle.
+    if (error instanceof WaitForTransactionReceiptTimeoutError) return "TIMED_OUT";
     throw error;
   }
 }

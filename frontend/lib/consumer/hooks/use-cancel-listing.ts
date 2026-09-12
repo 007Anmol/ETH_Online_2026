@@ -6,8 +6,9 @@ import { SignatureRejectedError } from "@/lib/consumer/adapters/nft-transfer-ada
 import { WrongNetworkError } from "@/lib/consumer/chain/hedera-wallet-client";
 import { waitForRealReceipt } from "@/lib/consumer/chain/watch-transaction";
 import type { EthereumWalletLike } from "@/lib/consumer/chain/hedera-wallet-client";
+import { HEDERA_CONSUMER_MARKETPLACE_ADDRESS } from "@verichain/shared";
 
-const MARKETPLACE_CONTRACT_ADDRESS = "0xCC98075D05c02a7f136ff534bB01C5bE4476da4F" as const;
+const MARKETPLACE_CONTRACT_ADDRESS = HEDERA_CONSUMER_MARKETPLACE_ADDRESS;
 
 export type CancelListingState =
   | "IDLE"

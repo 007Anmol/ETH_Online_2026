@@ -45,7 +45,7 @@ export function ReportIssueForm({ productId, productCode }: { productId: string;
 
   if (stage === "success" && grievanceId) {
     return (
-      <div className="vc-card flex flex-col items-center gap-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 text-center">
+      <div className="vc-card vc-neon-panel flex flex-col items-center gap-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 text-center">
         <span className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500">
           <Check size={24} className="text-white" strokeWidth={3} />
         </span>
@@ -64,7 +64,7 @@ export function ReportIssueForm({ productId, productCode }: { productId: string;
   }
 
   return (
-    <div className="vc-card rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
+    <div className="vc-card vc-neon-panel rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
       <p className="text-xs font-medium uppercase tracking-[0.14em] text-[var(--muted)]">
         Report an issue
       </p>

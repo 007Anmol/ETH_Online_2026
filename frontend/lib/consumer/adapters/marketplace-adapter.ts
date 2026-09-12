@@ -15,6 +15,7 @@ const marketplaceAbi = marketplaceAbiJson as Abi;
 const APPROVAL_GAS_LIMIT = 250_000n;
 const LISTING_GAS_LIMIT = 300_000n;
 const BUY_GAS_LIMIT = 500_000n;
+const WITHDRAW_GAS_LIMIT = 150_000n;
 
 function isUserRejection(error: unknown): boolean {
   const message =
@@ -129,6 +130,27 @@ export async function buyListingOnChain(input: {
     data,
     BUY_GAS_LIMIT,
     input.transactionValue,
+  );
+  return { txHash };
+}
+
+/** Pull-payment settlement — moves a seller's `pendingWithdrawals` balance
+ *  to their wallet. Real HBAR, real transaction; there is no reconciliation
+ *  step because this doesn't change listing/ownership state Supabase mirrors. */
+export async function withdrawProceedsOnChain(input: {
+  wallet: EthereumWalletLike;
+  marketplaceContractAddress: `0x${string}`;
+}): Promise<{ txHash: `0x${string}` }> {
+  const data = encodeFunctionData({
+    abi: marketplaceAbi,
+    functionName: "withdraw",
+    args: [],
+  });
+  const txHash = await send(
+    input.wallet,
+    input.marketplaceContractAddress,
+    data,
+    WITHDRAW_GAS_LIMIT,
   );
   return { txHash };
 }

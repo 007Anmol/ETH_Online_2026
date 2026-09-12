@@ -22,23 +22,53 @@
      app/globals.css since it's consumer-scoped, not landing-page brand. */
   --vc-accent: #5b5bf6;
   --vc-accent-soft: rgba(91, 91, 246, 0.1);
-  --vc-accent-glow: rgba(91, 91, 246, 0.25);
+  --vc-accent-glow: rgba(91, 91, 246, 0.3);
   --vc-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --vc-card-shadow-hover: 0 12px 32px -12px rgba(91, 91, 246, 0.28);
+  --vc-card-shadow-hover:
+    0 0 0 1px var(--vc-accent-soft),
+    0 16px 40px -14px var(--vc-accent-glow),
+    0 4px 18px -6px var(--vc-neon-cyan-glow);
+
+  /* A little off the pure #fff of app/globals.css's --surface — a flat
+     white card next to a bright neon accent reads as glare, not "clean".
+     Overrides globals.css's --surface for consumer routes only (this
+     stylesheet loads after globals.css for every /consumer/* route, so the
+     later :root wins at equal specificity). */
+  --surface: #fbfbf8;
+
+  /* Multicolour neon set, used sparingly as glow/highlight accents (status
+     dots, active-step glow, card hover) — never as large flat fills, so the
+     base UI stays clean rather than becoming a neon dashboard. */
+  --vc-neon-cyan: #06b6d4;
+  --vc-neon-cyan-glow: rgba(6, 182, 212, 0.22);
+  --vc-neon-pink: #ec4899;
+  --vc-neon-pink-glow: rgba(236, 72, 153, 0.22);
+  --vc-neon-lime: #84cc16;
+  --vc-neon-lime-glow: rgba(132, 204, 22, 0.22);
 }
 
 .dark {
   /* Brighter against the dark surface so it doesn't go muddy at low opacity. */
   --vc-accent: #8785ff;
   --vc-accent-soft: rgba(135, 133, 255, 0.14);
-  --vc-accent-glow: rgba(135, 133, 255, 0.35);
+  --vc-accent-glow: rgba(135, 133, 255, 0.4);
   --vc-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-  --vc-card-shadow-hover: 0 16px 40px -14px rgba(135, 133, 255, 0.35);
+  --vc-card-shadow-hover:
+    0 0 0 1px var(--vc-accent-soft),
+    0 20px 48px -16px var(--vc-accent-glow),
+    0 6px 22px -8px var(--vc-neon-cyan-glow);
+
+  --vc-neon-cyan: #22d3ee;
+  --vc-neon-cyan-glow: rgba(34, 211, 238, 0.3);
+  --vc-neon-pink: #f472b6;
+  --vc-neon-pink-glow: rgba(244, 114, 182, 0.3);
+  --vc-neon-lime: #a3e635;
+  --vc-neon-lime-glow: rgba(163, 230, 53, 0.3);
 }
 
 /* Shared hover treatment for consumer surface cards — border tints toward
-   the accent, a soft accent-tinted shadow lifts the card, content shifts up
-   a touch. Respects reduced motion via the .vc-card base transition being
+   the accent, a soft multicolour glow lifts the card, content shifts up a
+   touch. Respects reduced motion via the .vc-card base transition being
    short and transform-only (no layout thrash). */
 .vc-card {
   transition:
@@ -54,6 +84,32 @@
   transform: translateY(-2px);
 }
 
+/* Gradient-text treatment for a hero label/heading — used sparingly, never
+   for body copy (a full page of gradient text is unreadable, not "neon"). */
+.vc-neon-text {
+  background: linear-gradient(90deg, var(--vc-accent), var(--vc-neon-cyan) 60%, var(--vc-neon-pink));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Soft breathing glow for the current-step / primary-action element — a
+   slow, low-amplitude pulse rather than a strobe, so it reads as "alive"
+   without being distracting next to a wallet-signature wait. */
+@keyframes vc-glow-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 var(--vc-accent-glow);
+  }
+  50% {
+    box-shadow: 0 0 0 8px transparent;
+  }
+}
+
+.vc-glow-pulse {
+  animation: vc-glow-pulse 2.4s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .vc-card {
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
@@ -61,4 +117,42 @@
   .vc-card:hover {
     transform: none;
   }
+  .vc-glow-pulse {
+    animation: none;
+  }
+}
+
+/* Dark-purple treatment for the real, on-chain-backed Hedera surfaces
+ * (product cards + transfer/resell/marketplace/withdraw panels) — always
+ * dark regardless of the light/dark toggle, so "this one is real money and
+ * real chain state" reads as visually distinct from the plain demo catalog,
+ * and so it never inherits whatever pale/washed contrast the light theme's
+ * tokens have elsewhere. Works by overriding the shared --foreground/
+ * --muted/--border/--surface/--vc-accent variables locally on this element
+ * — every existing `text-[var(--foreground)]` etc. class already in these
+ * components picks the new values up for free, no per-element edits needed.
+ */
+.vc-neon-panel {
+  --foreground: #f5f2ff;
+  --muted: #c3b6fb;
+  --border: rgba(167, 139, 250, 0.35);
+  /* Also override --background (not just --surface) — inputs inside these
+     panels use bg-[var(--background)] for a slightly recessed look versus
+     the card, and without this override they'd keep the page's light-mode
+     background while inheriting this panel's light text color, i.e.
+     unreadable light-on-light. */
+  --background: #150c30;
+  --surface: #1c1140;
+  --surface-muted: #241751;
+  --vc-accent: #b9a3ff;
+  --vc-accent-soft: rgba(185, 163, 255, 0.18);
+  --vc-accent-glow: rgba(185, 163, 255, 0.5);
+  --vc-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --vc-card-shadow-hover:
+    0 0 0 1px rgba(185, 163, 255, 0.25),
+    0 24px 56px -20px rgba(124, 58, 237, 0.6),
+    0 6px 22px -8px var(--vc-neon-cyan-glow);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 1px 2px rgba(0, 0, 0, 0.35);
 }

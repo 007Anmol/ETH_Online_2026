@@ -1,13 +1,44 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useWallets } from "@privy-io/react-auth";
 import { Check, ExternalLink, TriangleAlert } from "lucide-react";
+import { toast } from "sonner";
 import { HederaSessionGate } from "@/components/consumer/HederaSessionGate";
+import { TransactionSteps } from "@/components/consumer/transaction/TransactionSteps";
+import type { TransactionStepsStatus } from "@/components/consumer/transaction/TransactionSteps";
 import { useNftTransfer } from "@/lib/consumer/hooks/use-nft-transfer";
 import type { TransferState } from "@/lib/consumer/types";
 
 const ADDRESS_PATTERN = /^0x[a-fA-F0-9]{40}$/;
+
+const STEPS = ["Validate ownership", "Sign in wallet", "Confirm on Hedera", "Verify new owner"];
+
+function progressFor(state: TransferState): { activeIndex: number; status: TransactionStepsStatus } | null {
+  switch (state) {
+    case "VALIDATING":
+      return { activeIndex: 0, status: "progress" };
+    case "AWAITING_SIGNATURE":
+      return { activeIndex: 1, status: "progress" };
+    case "SUBMITTED":
+    case "CONFIRMING_ON_HEDERA":
+      return { activeIndex: 2, status: "progress" };
+    case "VERIFYING_OWNERSHIP":
+      return { activeIndex: 3, status: "progress" };
+    case "CONFIRMED":
+      return { activeIndex: 3, status: "done" };
+    case "SIGNATURE_REJECTED":
+    case "WRONG_NETWORK":
+      return { activeIndex: 1, status: "failed" };
+    case "TRANSACTION_REVERTED":
+    case "TRANSACTION_FAILED":
+      return { activeIndex: 2, status: "failed" };
+    case "OWNERSHIP_VERIFICATION_FAILED":
+      return { activeIndex: 3, status: "failed" };
+    default:
+      return null;
+  }
+}
 
 const STATE_LABEL: Record<TransferState, string> = {
   IDLE: "Ready to transfer",
@@ -47,16 +78,20 @@ export function TransferPanel({
   const { state, txHash, error, syncStatus, transfer } = useNftTransfer(productId);
   const [recipient, setRecipient] = useState("");
 
+  useEffect(() => {
+    if (error && FAILURE_STATES.has(state)) toast.error(error);
+  }, [error, state]);
+
   const wallet = wallets[0];
   const busy = !["IDLE", "CONFIRMED"].includes(state) && !FAILURE_STATES.has(state);
   const recipientValid = ADDRESS_PATTERN.test(recipient.trim());
 
   return (
-    <div className="vc-card rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
+    <div className="vc-card vc-neon-panel rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
       <p className="text-xs font-medium uppercase tracking-[0.14em] text-[var(--muted)]">
         Real Hedera testnet transfer
       </p>
-      <h1 className="mt-2 text-lg font-semibold text-[var(--foreground)]">{productCode}</h1>
+      <h1 className="vc-neon-text mt-2 text-lg font-semibold">{productCode}</h1>
       <p className="mt-1 font-mono text-[11px] text-[var(--muted)]">{productIdHash}</p>
 
       <dl className="mt-4 space-y-2 border-t border-[var(--border)] pt-4 text-sm">
@@ -106,7 +141,7 @@ export function TransferPanel({
                 type="button"
                 disabled={busy || !recipientValid}
                 onClick={() => void transfer(sessionWallet, recipient.trim())}
-                className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[var(--vc-accent)] text-sm font-medium text-white disabled:opacity-50"
+                className={`mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[var(--vc-accent)] text-sm font-medium text-white disabled:opacity-50 ${busy ? "vc-glow-pulse" : ""}`}
               >
                 {busy ? (
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
@@ -120,7 +155,11 @@ export function TransferPanel({
 
       {state !== "IDLE" ? (
         <div className="mt-5 border-t border-[var(--border)] pt-4 text-sm">
-          <div className="flex items-center gap-2">
+          {progressFor(state) ? (
+            <TransactionSteps steps={STEPS} {...progressFor(state)!} />
+          ) : null}
+
+          <div className="mt-3 flex items-center gap-2">
             {state === "CONFIRMED" ? (
               <Check size={16} className="text-emerald-600" />
             ) : FAILURE_STATES.has(state) ? (

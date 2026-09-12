@@ -10,9 +10,13 @@ import { WrongNetworkError } from "@/lib/consumer/chain/hedera-wallet-client";
 import { hbarToTinybars } from "@/lib/consumer/chain/hbar-units";
 import { waitForRealReceipt } from "@/lib/consumer/chain/watch-transaction";
 import type { EthereumWalletLike } from "@/lib/consumer/chain/hedera-wallet-client";
+import {
+  HEDERA_CONSUMER_MARKETPLACE_ADDRESS,
+  HEDERA_CONSUMER_NFT_ADDRESS,
+} from "@verichain/shared";
 
-const NFT_CONTRACT_ADDRESS = "0xF217e76F80a2743769B3f6D51bE1F1B6C2cC7b49" as const;
-const MARKETPLACE_CONTRACT_ADDRESS = "0xCC98075D05c02a7f136ff534bB01C5bE4476da4F" as const;
+const NFT_CONTRACT_ADDRESS = HEDERA_CONSUMER_NFT_ADDRESS;
+const MARKETPLACE_CONTRACT_ADDRESS = HEDERA_CONSUMER_MARKETPLACE_ADDRESS;
 
 export type CreateListingState =
   | "IDLE"

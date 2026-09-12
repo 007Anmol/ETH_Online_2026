@@ -6,13 +6,14 @@ import { useWallets } from "@privy-io/react-auth";
 import { ArrowLeftRight, MessageSquareWarning, Tag } from "lucide-react";
 import { LoadingState } from "@/components/consumer/states/LoadingState";
 import { EmptyState } from "@/components/consumer/states/EmptyState";
+import { WithdrawProceedsCard } from "@/components/consumer/products/WithdrawProceedsCard";
 
 type HederaProduct = { productId: string; productCode: string; ownerWalletAddress: string };
 
 /**
- * Real, on-chain-backed products — separate from the mock demo catalog
- * above. Each card links to the real Transfer/Resell/Report pages
- * (lib/consumer/adapters/*, app/api/consumer/**), wired to the deployed
+ * Real, on-chain-backed products. Each card links to the real
+ * Transfer/Resell/Report pages (lib/consumer/adapters/*,
+ * app/api/consumer/**), wired to the deployed
  * VeriChainConsumerNFT/VeriChainMarketplace contracts on Hedera testnet.
  */
 export function HederaProductsSection() {
@@ -27,12 +28,20 @@ export function HederaProductsSection() {
   }, []);
 
   return (
-    <div className="mt-14">
-      <div className="flex items-center gap-2">
-        <span className="h-1.5 w-1.5 rounded-full bg-[var(--vc-accent)]" />
-        <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--muted)]">
-          Real Hedera testnet products
-        </p>
+    <div>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <span className="h-1.5 w-1.5 rounded-full bg-[var(--vc-accent)]" />
+          <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--muted)]">
+            Real Hedera testnet products
+          </p>
+        </div>
+        <Link
+          href="/consumer/activity"
+          className="text-xs font-medium text-[var(--vc-accent)] hover:underline"
+        >
+          View activity
+        </Link>
       </div>
       <p className="mt-2 max-w-lg text-sm text-[var(--muted)]">
         These are backed by a real deployed contract, not the demo catalog above —
@@ -40,14 +49,19 @@ export function HederaProductsSection() {
       </p>
 
       <div className="mt-5">
+        <WithdrawProceedsCard />
         {products === null ? (
-          <LoadingState label="Loading Hedera products" />
+          <div className="vc-neon-panel rounded-xl">
+            <LoadingState label="Loading Hedera products" />
+          </div>
         ) : products.length === 0 ? (
-          <EmptyState
-            icon={Tag}
-            title="No on-chain products yet"
-            description="Ask for a demo product to be minted to your wallet to try this out."
-          />
+          <div className="vc-neon-panel rounded-xl">
+            <EmptyState
+              icon={Tag}
+              title="No on-chain products yet"
+              description="Ask for a demo product to be minted to your wallet to try this out."
+            />
+          </div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">
             {products.map((product) => {
@@ -55,7 +69,7 @@ export function HederaProductsSection() {
               return (
                 <div
                   key={product.productId}
-                  className="vc-card rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4"
+                  className="vc-card vc-neon-panel rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4"
                 >
                   <p className="text-sm font-medium text-[var(--foreground)]">{product.productCode}</p>
                   <p className="mt-1 font-mono text-xs text-[var(--muted)]">

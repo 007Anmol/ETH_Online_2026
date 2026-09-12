@@ -15,6 +15,8 @@ const NAV_LINKS = [
   { href: "/consumer", label: "Home" },
   { href: "/consumer/products", label: "My products" },
   { href: "/consumer/hedera-marketplace", label: "Marketplace" },
+  { href: "/consumer/activity", label: "Activity" },
+  { href: "/consumer/hedera-grievances", label: "Grievances" },
   { href: "/consumer/profile", label: "Profile" },
 ];
 

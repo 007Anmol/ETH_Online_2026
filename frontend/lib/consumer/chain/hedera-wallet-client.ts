@@ -31,8 +31,12 @@ export type EthereumWalletLike = {
 };
 
 export class WrongNetworkError extends Error {
-  constructor() {
-    super("Wallet is not on Hedera Testnet (chain id 296). Switch networks and try again.");
+  constructor(detail?: string) {
+    super(
+      `Wallet is not on Hedera Testnet (chain id 296). Switch networks and try again.${
+        detail ? ` (${detail})` : ""
+      }`,
+    );
     this.name = "WrongNetworkError";
   }
 }
@@ -48,11 +52,33 @@ export async function getWalletClient(wallet: EthereumWalletLike): Promise<Walle
   if (wallet.switchChain) {
     try {
       await wallet.switchChain(HEDERA_TESTNET.id);
-    } catch {
-      throw new WrongNetworkError();
+    } catch (caught) {
+      // eslint-disable-next-line no-console
+      console.error("[hedera-wallet-client] switchChain failed", caught);
+      throw new WrongNetworkError(caught instanceof Error ? caught.message : String(caught));
     }
   }
 
+  const provider = await wallet.getEthereumProvider();
+
+  return createWalletClient({
+    account: wallet.address as Address,
+    chain: HEDERA_TESTNET,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    transport: custom(provider as any),
+  });
+}
+
+/**
+ * Same wallet client, without forcing a network switch first — for a plain
+ * message signature (`personal_sign`), which is chain-agnostic. The
+ * sign-in step doesn't need the wallet on Hedera Testnet at all, and
+ * forcing an unnecessary switchChain here was hanging/timing out on some
+ * wallets, blocking sign-in before the user ever got to a real
+ * transaction (where switchChain is genuinely required and stays in
+ * getWalletClient above).
+ */
+export async function getSigningWalletClient(wallet: EthereumWalletLike): Promise<WalletClient> {
   const provider = await wallet.getEthereumProvider();
 
   return createWalletClient({

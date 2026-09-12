@@ -9,8 +9,9 @@ import { WrongNetworkError } from "@/lib/consumer/chain/hedera-wallet-client";
 import { waitForRealReceipt } from "@/lib/consumer/chain/watch-transaction";
 import type { EthereumWalletLike } from "@/lib/consumer/chain/hedera-wallet-client";
 import type { TransferState } from "@/lib/consumer/types";
+import { HEDERA_CONSUMER_NFT_ADDRESS } from "@verichain/shared";
 
-const NFT_CONTRACT_ADDRESS = "0xF217e76F80a2743769B3f6D51bE1F1B6C2cC7b49" as const;
+const NFT_CONTRACT_ADDRESS = HEDERA_CONSUMER_NFT_ADDRESS;
 
 export type TransferHookState = {
   state: TransferState;

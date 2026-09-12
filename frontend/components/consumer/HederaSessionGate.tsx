@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useConnectWallet, usePrivy, useWallets } from "@privy-io/react-auth";
+import { useLogin, usePrivy, useWallets } from "@privy-io/react-auth";
 import { Wallet } from "lucide-react";
 import { useHederaSession } from "@/lib/consumer/hooks/use-hedera-session";
 
@@ -18,18 +18,23 @@ export function HederaSessionGate({
   children: (wallet: ReturnType<typeof useWallets>["wallets"][number]) => ReactNode;
 }) {
   const { ready, authenticated } = usePrivy();
-  const { connectWallet } = useConnectWallet();
+  const { login } = useLogin();
   const { wallets } = useWallets();
   const wallet = wallets[0];
   const { status, error, signIn } = useHederaSession();
 
   if (!ready) return null;
 
+  // `authenticated` (Privy's own login state, needed for getAccessToken() to
+  // work) is distinct from merely having a connected wallet — useLogin(),
+  // not useConnectWallet(), is what actually authenticates. Using the wrong
+  // one here previously left the button stuck showing "Connect wallet"
+  // forever even after a wallet was linked (found via real browser testing).
   if (!authenticated || !wallet) {
     return (
       <button
         type="button"
-        onClick={() => connectWallet()}
+        onClick={() => login()}
         className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[var(--vc-accent)] text-sm font-medium text-white"
       >
         <Wallet size={16} />

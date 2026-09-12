@@ -1,16 +1,16 @@
 import { getOnChainListing, tinybarsToHbarString } from "@verichain/hedera";
 import { json } from "@/lib/api/http";
-import { requireConsumer } from "@/lib/auth/authorization";
 import { createServiceClient } from "@/lib/supabase";
 
-/** Read-only listing detail — on-chain price/status/seller is authoritative;
- *  actual purchase validation still happens in purchase/preflight. */
+/**
+ * Read-only listing detail — on-chain price/status/seller is authoritative;
+ * actual purchase validation still happens in purchase/preflight. No auth
+ * gate, same reasoning as the listings collection route.
+ */
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ productId: string }> },
 ) {
-  const authorization = await requireConsumer();
-  if (!authorization.ok) return json({ error: authorization.error }, authorization.status);
   const { productId } = await params;
 
   const supabase = createServiceClient();

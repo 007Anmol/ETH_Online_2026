@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useConnectWallet, usePrivy, useWallets } from "@privy-io/react-auth";
-import { Check, ExternalLink, Tag, TriangleAlert, Wallet } from "lucide-react";
+import { useWallets } from "@privy-io/react-auth";
+import { Check, ExternalLink, Tag, TriangleAlert } from "lucide-react";
+import { HederaSessionGate } from "@/components/consumer/HederaSessionGate";
 import { isMarketplaceApprovedClient } from "@/lib/consumer/chain/reads";
 import { useCreateListing } from "@/lib/consumer/hooks/use-create-listing";
 import type { CreateListingState } from "@/lib/consumer/hooks/use-create-listing";
@@ -40,16 +41,12 @@ export function ResellPanel({
   productCode: string;
   currentOwnerWallet: string | null;
 }) {
-  const { ready, authenticated } = usePrivy();
-  const { connectWallet } = useConnectWallet();
   const { wallets } = useWallets();
   const { state, txHash, error, createListing } = useCreateListing(productId);
   const [price, setPrice] = useState("");
   const [needsApproval, setNeedsApproval] = useState<boolean | null>(null);
 
   const wallet = wallets[0];
-  const isOwner =
-    !!wallet && !!currentOwnerWallet && wallet.address.toLowerCase() === currentOwnerWallet.toLowerCase();
 
   useEffect(() => {
     if (!wallet) return;
@@ -79,58 +76,61 @@ export function ResellPanel({
         </div>
       </dl>
 
-      {!ready ? null : !authenticated || !wallet ? (
-        <button
-          type="button"
-          onClick={() => connectWallet()}
-          className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[var(--vc-accent)] text-sm font-medium text-white"
-        >
-          <Wallet size={16} />
-          Connect wallet
-        </button>
-      ) : !isOwner ? (
-        <div className="mt-6 flex items-start gap-3 rounded-xl border border-amber-500/20 bg-amber-500/[0.06] p-4 text-sm">
-          <TriangleAlert size={16} className="mt-0.5 shrink-0 text-amber-600" />
-          <p className="text-[var(--muted)]">
-            Your connected wallet does not currently own this product on-chain.
-          </p>
-        </div>
-      ) : (
-        <div className="mt-6">
-          <label className="text-xs font-medium uppercase tracking-[0.12em] text-[var(--muted)]">
-            Price (HBAR)
-          </label>
-          <input
-            value={price}
-            onChange={(event) => setPrice(event.target.value)}
-            disabled={busy}
-            inputMode="decimal"
-            placeholder="0"
-            className="mt-2 h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 text-sm outline-none focus:border-[var(--vc-accent)]"
-          />
+      <HederaSessionGate>
+        {(sessionWallet) => {
+          const isOwner =
+            !!currentOwnerWallet &&
+            sessionWallet.address.toLowerCase() === currentOwnerWallet.toLowerCase();
 
-          {needsApproval ? (
-            <p className="mt-2 text-xs text-[var(--muted)]">
-              First time listing: you&apos;ll sign one extra approval transaction so the
-              marketplace contract can transfer this token on your behalf.
-            </p>
-          ) : null}
+          if (!isOwner) {
+            return (
+              <div className="mt-6 flex items-start gap-3 rounded-xl border border-amber-500/20 bg-amber-500/[0.06] p-4 text-sm">
+                <TriangleAlert size={16} className="mt-0.5 shrink-0 text-amber-600" />
+                <p className="text-[var(--muted)]">
+                  Your connected wallet does not currently own this product on-chain.
+                </p>
+              </div>
+            );
+          }
 
-          <button
-            type="button"
-            disabled={busy || !priceValid || needsApproval === null}
-            onClick={() => void createListing(wallet, Number(price), needsApproval === true)}
-            className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[var(--vc-accent)] text-sm font-medium text-white disabled:opacity-50"
-          >
-            {busy ? (
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-            ) : (
-              <Tag size={16} />
-            )}
-            {STATE_LABEL[state]}
-          </button>
-        </div>
-      )}
+          return (
+            <div className="mt-6">
+              <label className="text-xs font-medium uppercase tracking-[0.12em] text-[var(--muted)]">
+                Price (HBAR)
+              </label>
+              <input
+                value={price}
+                onChange={(event) => setPrice(event.target.value)}
+                disabled={busy}
+                inputMode="decimal"
+                placeholder="0"
+                className="mt-2 h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 text-sm outline-none focus:border-[var(--vc-accent)]"
+              />
+
+              {needsApproval ? (
+                <p className="mt-2 text-xs text-[var(--muted)]">
+                  First time listing: you&apos;ll sign one extra approval transaction so the
+                  marketplace contract can transfer this token on your behalf.
+                </p>
+              ) : null}
+
+              <button
+                type="button"
+                disabled={busy || !priceValid || needsApproval === null}
+                onClick={() => void createListing(sessionWallet, Number(price), needsApproval === true)}
+                className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[var(--vc-accent)] text-sm font-medium text-white disabled:opacity-50"
+              >
+                {busy ? (
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                ) : (
+                  <Tag size={16} />
+                )}
+                {STATE_LABEL[state]}
+              </button>
+            </div>
+          );
+        }}
+      </HederaSessionGate>
 
       {state !== "IDLE" ? (
         <div className="mt-5 border-t border-[var(--border)] pt-4 text-sm">

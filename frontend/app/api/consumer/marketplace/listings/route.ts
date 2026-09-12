@@ -1,12 +1,13 @@
 import { json } from "@/lib/api/http";
-import { requireConsumer } from "@/lib/auth/authorization";
 import { createServiceClient } from "@/lib/supabase";
 
-/** Lists active resale listings with basic product info for the marketplace browse page. */
+/**
+ * Lists active resale listings with basic product info for the marketplace
+ * browse page. Deliberately no auth gate — same trust level as
+ * GET /api/consumer/hedera-products (browsing is non-sensitive; actual
+ * purchase/listing/cancel actions remain requireConsumer()-gated).
+ */
 export async function GET() {
-  const authorization = await requireConsumer();
-  if (!authorization.ok) return json({ error: authorization.error }, authorization.status);
-
   const supabase = createServiceClient();
   const { data: listings, error } = await supabase
     .from("resale_listings")

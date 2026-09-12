@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useConnectWallet, usePrivy, useWallets } from "@privy-io/react-auth";
-import { Ban, Check, ExternalLink, ShoppingBag, TriangleAlert, Wallet } from "lucide-react";
+import { Ban, Check, ExternalLink, ShoppingBag, TriangleAlert } from "lucide-react";
+import { HederaSessionGate } from "@/components/consumer/HederaSessionGate";
 import { usePurchaseListing } from "@/lib/consumer/hooks/use-purchase-listing";
 import { useCancelListing } from "@/lib/consumer/hooks/use-cancel-listing";
 import { LoadingState } from "@/components/consumer/states/LoadingState";
@@ -35,11 +35,6 @@ export function ListingPanel({
   productCode: string;
   productIdHash: `0x${string}`;
 }) {
-  const { ready, authenticated } = usePrivy();
-  const { connectWallet } = useConnectWallet();
-  const { wallets } = useWallets();
-  const wallet = wallets[0];
-
   const [info, setInfo] = useState<ListingInfo | null>(null);
   const purchaseHook = usePurchaseListing(productId);
   const cancelHook = useCancelListing(productId, productIdHash);
@@ -52,7 +47,6 @@ export function ListingPanel({
 
   if (!info) return <LoadingState label="Loading listing" />;
 
-  const isSeller = !!wallet && wallet.address.toLowerCase() === info.listing.seller.toLowerCase();
   const isActive = info.listing.status === "Active";
 
   return (
@@ -79,35 +73,32 @@ export function ListingPanel({
 
       {!isActive ? (
         <p className="mt-6 text-sm text-[var(--muted)]">This listing is no longer active.</p>
-      ) : !ready ? null : !authenticated || !wallet ? (
-        <button
-          type="button"
-          onClick={() => connectWallet()}
-          className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[var(--vc-accent)] text-sm font-medium text-white"
-        >
-          <Wallet size={16} />
-          Connect wallet
-        </button>
-      ) : isSeller ? (
-        <button
-          type="button"
-          disabled={cancelHook.state !== "IDLE" && cancelHook.state !== "CANCELLED"}
-          onClick={() => void cancelHook.cancel(wallet)}
-          className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-full border border-[var(--border)] text-sm font-medium disabled:opacity-50"
-        >
-          <Ban size={16} />
-          {cancelHook.state === "IDLE" ? "Cancel listing" : cancelHook.state}
-        </button>
       ) : (
-        <button
-          type="button"
-          disabled={purchaseHook.state !== "IDLE" && purchaseHook.state !== "COMPLETED"}
-          onClick={() => void purchaseHook.purchase(wallet)}
-          className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[var(--vc-accent)] text-sm font-medium text-white disabled:opacity-50"
-        >
-          <ShoppingBag size={16} />
-          {purchaseHook.state === "IDLE" ? `Buy for ${info.listing.priceHbar} HBAR` : purchaseHook.state}
-        </button>
+        <HederaSessionGate>
+          {(sessionWallet) =>
+            sessionWallet.address.toLowerCase() === info.listing.seller.toLowerCase() ? (
+              <button
+                type="button"
+                disabled={cancelHook.state !== "IDLE" && cancelHook.state !== "CANCELLED"}
+                onClick={() => void cancelHook.cancel(sessionWallet)}
+                className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-full border border-[var(--border)] text-sm font-medium disabled:opacity-50"
+              >
+                <Ban size={16} />
+                {cancelHook.state === "IDLE" ? "Cancel listing" : cancelHook.state}
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={purchaseHook.state !== "IDLE" && purchaseHook.state !== "COMPLETED"}
+                onClick={() => void purchaseHook.purchase(sessionWallet)}
+                className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[var(--vc-accent)] text-sm font-medium text-white disabled:opacity-50"
+              >
+                <ShoppingBag size={16} />
+                {purchaseHook.state === "IDLE" ? `Buy for ${info.listing.priceHbar} HBAR` : purchaseHook.state}
+              </button>
+            )
+          }
+        </HederaSessionGate>
       )}
 
       {purchaseHook.state !== "IDLE" ? (

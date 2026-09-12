@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Check, TriangleAlert } from "lucide-react";
+import { HederaSessionGate } from "@/components/consumer/HederaSessionGate";
 
 const CATEGORIES = [
   { value: "COUNTERFEIT_SUSPICION", label: "Suspected counterfeit" },
@@ -69,53 +70,61 @@ export function ReportIssueForm({ productId, productCode }: { productId: string;
       </p>
       <h1 className="mt-2 text-lg font-semibold text-[var(--foreground)]">{productCode}</h1>
 
-      <label className="mt-5 block text-xs font-medium uppercase tracking-[0.12em] text-[var(--muted)]">
-        Category
-      </label>
-      <select
-        value={category}
-        onChange={(event) => setCategory(event.target.value)}
-        disabled={stage === "submitting"}
-        className="mt-2 h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 text-sm outline-none focus:border-[var(--vc-accent)]"
-      >
-        <option value="" disabled>
-          Select a category
-        </option>
-        {CATEGORIES.map((c) => (
-          <option key={c.value} value={c.value}>
-            {c.label}
-          </option>
-        ))}
-      </select>
+      <HederaSessionGate>
+        {() => (
+          <>
+            <label className="mt-5 block text-xs font-medium uppercase tracking-[0.12em] text-[var(--muted)]">
+              Category
+            </label>
+            <select
+              value={category}
+              onChange={(event) => setCategory(event.target.value)}
+              disabled={stage === "submitting"}
+              className="mt-2 h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 text-sm outline-none focus:border-[var(--vc-accent)]"
+            >
+              <option value="" disabled>
+                Select a category
+              </option>
+              {CATEGORIES.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
 
-      <label className="mt-4 block text-xs font-medium uppercase tracking-[0.12em] text-[var(--muted)]">
-        Description
-      </label>
-      <textarea
-        value={description}
-        onChange={(event) => setDescription(event.target.value)}
-        disabled={stage === "submitting"}
-        rows={5}
-        placeholder="Tell us what you noticed, and when."
-        className="mt-2 w-full resize-none rounded-lg border border-[var(--border)] bg-[var(--background)] p-3 text-sm outline-none focus:border-[var(--vc-accent)]"
-      />
-      <p className="mt-1 text-xs text-[var(--muted)]">{description.trim().length}/10 characters minimum</p>
+            <label className="mt-4 block text-xs font-medium uppercase tracking-[0.12em] text-[var(--muted)]">
+              Description
+            </label>
+            <textarea
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              disabled={stage === "submitting"}
+              rows={5}
+              placeholder="Tell us what you noticed, and when."
+              className="mt-2 w-full resize-none rounded-lg border border-[var(--border)] bg-[var(--background)] p-3 text-sm outline-none focus:border-[var(--vc-accent)]"
+            />
+            <p className="mt-1 text-xs text-[var(--muted)]">
+              {description.trim().length}/10 characters minimum
+            </p>
 
-      <button
-        type="button"
-        disabled={!valid || stage === "submitting"}
-        onClick={() => void submit()}
-        className="mt-5 flex h-12 w-full items-center justify-center rounded-full bg-[var(--vc-accent)] text-sm font-medium text-white disabled:opacity-50"
-      >
-        {stage === "submitting" ? "Submitting…" : "Submit grievance"}
-      </button>
+            <button
+              type="button"
+              disabled={!valid || stage === "submitting"}
+              onClick={() => void submit()}
+              className="mt-5 flex h-12 w-full items-center justify-center rounded-full bg-[var(--vc-accent)] text-sm font-medium text-white disabled:opacity-50"
+            >
+              {stage === "submitting" ? "Submitting…" : "Submit grievance"}
+            </button>
 
-      {stage === "failed" ? (
-        <div className="mt-4 flex items-start gap-2 text-sm text-red-600">
-          <TriangleAlert size={16} className="mt-0.5 shrink-0" />
-          <p>{error}</p>
-        </div>
-      ) : null}
+            {stage === "failed" ? (
+              <div className="mt-4 flex items-start gap-2 text-sm text-red-600">
+                <TriangleAlert size={16} className="mt-0.5 shrink-0" />
+                <p>{error}</p>
+              </div>
+            ) : null}
+          </>
+        )}
+      </HederaSessionGate>
     </div>
   );
 }

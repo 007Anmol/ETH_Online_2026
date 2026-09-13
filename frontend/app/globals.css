@@ -1,14 +1,19 @@
 @import "tailwindcss";
 
 :root { --background: #f7f7f5; --foreground: #171717; --muted: #737373; --border: #e5e5e5; --surface: #ffffff; --surface-muted: #eeeeec; --accent: #b8eb2f; }
+:root { --font-primary: "Manrope", sans-serif; }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+.dark {
+  --background: #111111;
+  --foreground: #f5f5f3;
+  --muted: #a3a3a3;
+  --border: #2c2c2c;
+  --surface: #191919;
+  --surface-muted: #242424;
 }
 
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
 body {
   margin: 0;
   background: var(--background);
@@ -44,3 +49,17 @@ h1 { color: #181817; font-size: clamp(58px, 7.5vw, 116px); font-weight: 500; let
 .platform-section { display: flex; justify-content: space-between; margin: 0 auto; max-width: 1188px; padding: 145px 0 170px; }.platform-section h2 { font-size: clamp(44px, 5vw, 72px); font-weight: 500; letter-spacing: -.065em; line-height: .95; margin: 23px 0 0; }.platform-detail { align-items: flex-end; display: flex; flex-direction: column; justify-content: space-between; max-width: 305px; }.platform-detail p { color: #66655f; font-size: 14px; line-height: 1.8; margin: 0; }.circle-arrow { align-items: center; border: 1px solid #bbb9b0; border-radius: 50%; color: #232321; display: flex; height: 53px; justify-content: center; transition: background .2s, color .2s; width: 53px; }.circle-arrow:hover { background: #171717; color: #caff38; }
 @keyframes orbit { to { transform: rotate(332deg); } } @keyframes rise-in { from { opacity: 0; transform: translateY(18px) rotate(4deg); } to { opacity: 1; transform: translateY(0) rotate(4deg); } }
 @media (max-width: 800px) { .nav-links { display: none; }.hero-section { display: block; padding-top: 70px; }.hero-visual { margin: 50px -15px 0; min-height: 480px; }.signal-strip { align-items: flex-start; flex-direction: column; margin: 0 22px; gap: 16px; }.signal-steps { justify-content: space-between; width: 100%; }.strip-caption { display: none; }.platform-section { flex-direction: column; gap: 55px; padding: 100px 22px; }.platform-detail { align-items: flex-start; gap: 35px; }.tag-top { right: 0; }.tag-bottom { left: 0; } }
+.verifiable-highlight {
+  display: inline-block;
+  background: #000;
+  color: #fff;
+  padding: 0.08em 0.14em 0.12em;
+  transition:
+    background-color 500ms ease,
+    color 500ms ease;
+}
+
+.dark .verifiable-highlight {
+  background: #fff;
+  color: #000;
+}

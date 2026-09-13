@@ -73,21 +73,21 @@ export function BindForm({ products }: BindFormProps) {
     <div className="mt-8 grid gap-6 lg:grid-cols-2">
       <form
         onSubmit={onSubmit}
-        className="rounded-xl border border-zinc-200 bg-white p-6"
+        className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-6"
       >
-        <h2 className="text-sm font-semibold text-zinc-900">Attach a tag</h2>
-        <p className="mt-1 text-sm text-zinc-600">
+        <h2 className="text-sm font-semibold text-[var(--foreground)]">Attach a tag</h2>
+        <p className="mt-1 text-sm text-[var(--muted)]">
           Choose an unbound product and a hex tag UID (8–20 characters).
         </p>
 
-        <label className="mt-5 block text-sm font-medium text-zinc-700">
+        <label className="mt-5 block text-sm font-medium text-[var(--foreground)]">
           Product
           <select
             required
             value={productId}
             onChange={(event) => setProductId(event.target.value)}
             disabled={pending.length === 0}
-            className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm"
+            className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)]"
           >
             {pending.length === 0 ? (
               <option value="">No unbound products</option>
@@ -101,21 +101,21 @@ export function BindForm({ products }: BindFormProps) {
           </select>
         </label>
 
-        <label className="mt-4 block text-sm font-medium text-zinc-700">
+        <label className="mt-4 block text-sm font-medium text-[var(--foreground)]">
           Tag UID
           <input
             required
             value={tagUid}
             onChange={(event) => setTagUid(event.target.value)}
             placeholder="04AABBCCDD02"
-            className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 font-mono text-sm"
+            className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 font-mono text-sm text-[var(--foreground)]"
           />
         </label>
 
         <button
           type="submit"
           disabled={submitting || pending.length === 0}
-          className="mt-5 w-full rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-60"
+          className="mt-5 w-full rounded-lg bg-[var(--foreground)] px-4 py-2.5 text-sm font-medium text-[var(--background)] hover:opacity-80 disabled:opacity-60"
         >
           {submitting ? "Binding…" : "Bind tag"}
         </button>
@@ -126,27 +126,27 @@ export function BindForm({ products }: BindFormProps) {
           </p>
         ) : null}
         {success ? (
-          <p className="mt-4 rounded-lg bg-teal-50 px-3 py-2 text-sm text-teal-900">
+          <p className="mt-4 rounded-lg bg-emerald-500/[0.08] px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300">
             {success}
           </p>
         ) : null}
       </form>
 
-      <section className="rounded-xl border border-zinc-200 bg-white p-6">
-        <h2 className="text-sm font-semibold text-zinc-900">Already bound</h2>
+      <section className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-6">
+        <h2 className="text-sm font-semibold text-[var(--foreground)]">Already bound</h2>
         {bound.length === 0 ? (
-          <p className="mt-3 text-sm text-zinc-600">No tags bound yet.</p>
+          <p className="mt-3 text-sm text-[var(--muted)]">No tags bound yet.</p>
         ) : (
           <ul className="mt-3 space-y-2 text-sm">
             {bound.map((product) => (
               <li
                 key={product.id}
-                className="rounded-lg border border-zinc-100 px-3 py-2"
+                className="rounded-lg border border-[var(--border)] px-3 py-2"
               >
-                <div className="font-medium text-zinc-900">
+                <div className="font-medium text-[var(--foreground)]">
                   {productPickerLabel(product)}
                 </div>
-                <div className="font-mono text-xs text-zinc-500">
+                <div className="font-mono text-xs text-[var(--muted)]">
                   {product.bound_tag_uid}
                 </div>
               </li>

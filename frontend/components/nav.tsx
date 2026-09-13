@@ -21,15 +21,12 @@ export function Nav({ session }: NavProps) {
           { href: "/manufacturer/products", label: "Products" },
           { href: "/manufacturer/nfc", label: "NFC bind" },
           { href: "/simulator", label: "Simulator" },
-          { href: "/scan", label: "Scan" },
         ]
       : [
-          { href: "/scan", label: "Scan" },
           { href: "/simulator", label: "Simulator" },
         ]
     : [
         { href: "/login", label: "Login" },
-        { href: "/scan", label: "Scan" },
       ];
 
   async function logout() {

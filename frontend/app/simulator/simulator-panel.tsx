@@ -11,9 +11,9 @@ export function SimulatorPanel({ products }: { products: BindableProduct[] }) {
 
   return (
     <div className="mt-8 grid gap-6 lg:grid-cols-2">
-      <section className="rounded-xl border border-zinc-200 bg-white p-6">
-        <h2 className="text-sm font-semibold text-zinc-900">NFC simulator</h2>
-        <p className="mt-1 text-sm text-zinc-600">
+      <section className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-6">
+        <h2 className="text-sm font-semibold text-[var(--foreground)]">NFC simulator</h2>
+        <p className="mt-1 text-sm text-[var(--muted)]">
           Authentic creates a new payload, then verifies it. Replay sends the
           exact bytes below. Invalid sends a broken stamp.
         </p>
@@ -30,7 +30,7 @@ export function SimulatorPanel({ products }: { products: BindableProduct[] }) {
             type="button"
             onClick={() => void demo.authenticTap()}
             disabled={!demo.selected || demo.busy !== null}
-            className="rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-60"
+            className="rounded-lg bg-[var(--foreground)] px-4 py-2.5 text-sm font-medium text-[var(--background)] hover:opacity-80 disabled:opacity-60"
           >
             {demo.busy === "authentic" ? "Tapping…" : "Simulate authentic tap"}
           </button>
@@ -38,7 +38,7 @@ export function SimulatorPanel({ products }: { products: BindableProduct[] }) {
             type="button"
             onClick={() => void demo.replayTap()}
             disabled={!demo.lastPayload || demo.busy !== null}
-            className="rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50 disabled:opacity-60"
+            className="rounded-lg border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--foreground)] hover:bg-[var(--surface-muted)] disabled:opacity-60"
           >
             {demo.busy === "replay" ? "Replaying…" : "Replay same payload"}
           </button>
@@ -46,14 +46,14 @@ export function SimulatorPanel({ products }: { products: BindableProduct[] }) {
             type="button"
             onClick={() => void demo.invalidTap()}
             disabled={demo.busy !== null}
-            className="rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50 disabled:opacity-60"
+            className="rounded-lg border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--foreground)] hover:bg-[var(--surface-muted)] disabled:opacity-60"
           >
             {demo.busy === "invalid" ? "Sending…" : "Invalid tap"}
           </button>
         </div>
 
         <div className="mt-5">
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+          <p className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
             Last payload
           </p>
           <pre className="mt-2 overflow-x-auto rounded-lg bg-zinc-950 p-3 font-mono text-xs text-zinc-100">
@@ -71,14 +71,14 @@ export function SimulatorPanel({ products }: { products: BindableProduct[] }) {
         {demo.result ? (
           <VerifyResult view={demo.result} />
         ) : (
-          <div className="rounded-xl border border-dashed border-zinc-300 p-6 text-sm text-zinc-500">
+          <div className="rounded-xl border border-dashed border-[var(--border)] p-6 text-sm text-[var(--muted)]">
             Verify result will appear here from the API.
           </div>
         )}
         {demo.graphNonce ? (
-          <div className="mt-6 rounded-xl border border-zinc-200 bg-white p-5">
-            <h2 className="text-sm font-semibold text-zinc-900">Graph history</h2>
-            <p className="mt-2 text-sm text-zinc-600">
+          <div className="mt-6 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-5">
+            <h2 className="text-sm font-semibold text-[var(--foreground)]">Graph history</h2>
+            <p className="mt-2 text-sm text-[var(--muted)]">
               Nonce consumed on chain. A replay is DUPLICATE because this nonce already exists in The Graph.
             </p>
             <HashScanLink txHash={demo.graphNonce.txHash} className="mt-3" />

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { AlertTriangle, MapPin, Radio } from "lucide-react";
 
 import Sidebar from "@/components/team2/Sidebar";
@@ -26,6 +26,11 @@ export default function CheckpointsPage() {
   });
   const [result, setResult] = useState<RiskResult | null>(null);
   const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    const selectedProductId = new URLSearchParams(window.location.search).get("productId");
+    if (selectedProductId) setProductId(selectedProductId);
+  }, []);
 
   const analyzeAndRecord = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

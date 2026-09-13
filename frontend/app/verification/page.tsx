@@ -22,15 +22,25 @@ import {
   type OnChainProduct,
   type OnChainTag,
 } from "@/lib/blockchain";
+import { fetchDirectory, type ProductRecord } from "@/lib/supabase";
 import { DEMO_PRODUCT } from "@/lib/demoProduct";
 
 export default function VerificationPage() {
-  const [productCode, setProductCode] = useState(DEMO_PRODUCT.productCode);
-  const [tagUid, setTagUid] = useState(DEMO_PRODUCT.tagUid);
+  const [productCode, setProductCode] = useState<string>(DEMO_PRODUCT.productCode);
+  const [tagUid, setTagUid] = useState<string>(DEMO_PRODUCT.tagUid);
   const [owner, setOwner] = useState<string>("");
   const [product, setProduct] = useState<OnChainProduct | null>(null);
   const [tag, setTag] = useState<OnChainTag | null>(null);
   const [error, setError] = useState("");
+  const [products, setProducts] = useState<ProductRecord[]>([]);
+
+  useEffect(() => {
+    void fetchDirectory().then(({ products: productRows }) => {
+      const minted = productRows.filter((product) => product.token_id !== null);
+      setProducts(minted);
+      if (minted[0]) setProductCode(minted[0].product_code);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -90,13 +100,12 @@ export default function VerificationPage() {
             <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_360px]">
               <section className="rounded-xl border border-gray-200 p-8">
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="block text-[10px] uppercase tracking-wider text-gray-400">
+                    <label className="block text-[10px] uppercase tracking-wider text-gray-400">
                     Product code
-                    <input
-                      value={productCode}
-                      onChange={(event) => setProductCode(event.target.value)}
-                      className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm normal-case tracking-normal text-black outline-none focus:border-black"
-                    />
+                    <select value={productCode} onChange={(event) => setProductCode(event.target.value)} className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm normal-case tracking-normal text-black outline-none focus:border-black">
+                      {products.length === 0 && <option value={productCode}>{productCode} · directory unavailable</option>}
+                      {products.map((product) => <option key={product.id} value={product.product_code}>{product.product_code} · {product.batch?.product_name ?? "Minted product"} · token {product.token_id}</option>)}
+                    </select>
                   </label>
                   <label className="block text-[10px] uppercase tracking-wider text-gray-400">
                     Tag UID

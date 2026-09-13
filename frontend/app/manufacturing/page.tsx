@@ -19,7 +19,9 @@ import {
   readTag,
 } from "@/lib/blockchain";
 import {
+  fetchDirectory,
   hasBrowserSupabaseConfig,
+  type ProductRecord,
 } from "@/lib/supabase";
 import type { ManufacturerPermission } from "@/lib/blockchain/types";
 import { DEMO_PRODUCT } from "@/lib/demoProduct";
@@ -63,14 +65,23 @@ export default function ManufacturingPage() {
   const { switchChain, isPending: isSwitching } = useSwitchChain();
   const onHedera = chainId === hedera.id;
   const [mode, setMode] = useState<Mode>("createBatch");
-  const [batchCode, setBatchCode] = useState(DEMO_PRODUCT.batchCode);
-  const [quantity, setQuantity] = useState("1");
-  const [productCodes, setProductCodes] = useState(DEMO_PRODUCT.productCode);
-  const [productCode, setProductCode] = useState(DEMO_PRODUCT.productCode);
-  const [tagUid, setTagUid] = useState(DEMO_PRODUCT.tagUid);
+  const [batchCode, setBatchCode] = useState<string>(DEMO_PRODUCT.batchCode);
+  const [quantity, setQuantity] = useState<string>("1");
+  const [productCodes, setProductCodes] = useState<string>(DEMO_PRODUCT.productCode);
+  const [productCode, setProductCode] = useState<string>(DEMO_PRODUCT.productCode);
+  const [tagUid, setTagUid] = useState<string>(DEMO_PRODUCT.tagUid);
   const [message, setMessage] = useState("");
   const [authMessage, setAuthMessage] = useState("");
   const [canWrite, setCanWrite] = useState(false);
+  const [mintedProducts, setMintedProducts] = useState<ProductRecord[]>([]);
+
+  useEffect(() => {
+    void fetchDirectory().then(({ products }) => {
+      const minted = products.filter((product) => product.token_id !== null);
+      setMintedProducts(minted);
+      if (minted[0]) setProductCode(minted[0].product_code);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -318,7 +329,13 @@ export default function ManufacturingPage() {
                   </label>
                 )}
                 {(mode === "bindTag" || mode === "lookup") && (
-                  <Field label="Product code" value={productCode} setValue={setProductCode} />
+                  <label className="block text-[10px] uppercase tracking-wider text-gray-400">
+                    Product code
+                    <select value={productCode} onChange={(event) => setProductCode(event.target.value)} className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm normal-case tracking-normal text-black outline-none focus:border-black">
+                      {mintedProducts.length === 0 && <option value={productCode}>{productCode} · directory unavailable</option>}
+                      {mintedProducts.map((product) => <option key={product.id} value={product.product_code}>{product.product_code} · {product.batch?.product_name ?? "Minted product"} · token {product.token_id}</option>)}
+                    </select>
+                  </label>
                 )}
                 {(mode === "bindTag" || mode === "lookup") && (
                   <Field label="NFC tag UID" value={tagUid} setValue={setTagUid} />

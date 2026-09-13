@@ -21,7 +21,10 @@ import { useHederaWrite } from "@/lib/blockchain/useHederaWrite";
 import { legacySupplyChainAbi } from "@/lib/team2/legacySupplyChainAbi";
 import {
   createShipmentRecord,
+  fetchDirectory,
   fetchShipments,
+  type OrganizationRecord,
+  type ProductRecord,
   updateShipmentRecord,
   type ShipmentRecord as DbShipmentRecord,
 } from "@/lib/supabase";
@@ -35,13 +38,15 @@ const shipmentStatuses = ["CREATED", "IN_TRANSIT", "RECEIVED", "CANCELLED"] as c
 export default function ShipmentsPage() {
   const { address: userAddress, isConnected } = useAccount();
   const [mounted, setMounted] = useState(false);
-  const [productId, setProductId] = useState(DEMO_PRODUCT.logisticsId);
-  const [team1ProductCode, setTeam1ProductCode] = useState(DEMO_PRODUCT.productCode);
+  const [productId, setProductId] = useState<string>(DEMO_PRODUCT.logisticsId);
+  const [team1ProductCode, setTeam1ProductCode] = useState<string>(DEMO_PRODUCT.productCode);
   const [receiver, setReceiver] = useState("");
   const [message, setMessage] = useState("");
   const [dbShipments, setDbShipments] = useState<DbShipmentRecord[]>([]);
   const [isLoadingDb, setIsLoadingDb] = useState(false);
   const [matchedShipment, setMatchedShipment] = useState<OnChainShipment | null>(null);
+  const [organizations, setOrganizations] = useState<OrganizationRecord[]>([]);
+  const [products, setProducts] = useState<ProductRecord[]>([]);
 
   const { data: logistics, refetch: refetchProduct } = useReadContract({
     address: supplyChainAddress,
@@ -70,6 +75,11 @@ export default function ShipmentsPage() {
   const productStatus = logisticsProduct ? PRODUCT_STATUS[logisticsProduct[2]] ?? "UNKNOWN" : "MISSING";
   const inTransit = logisticsProduct?.[2] === 1;
   const received = shipmentExists && status === "RECEIVED";
+  const organizationName = (value?: string | null) => {
+    if (!value) return "Unknown organization";
+    const match = organizations.find((organization) => organization.id.toLowerCase() === value.toLowerCase() || organization.wallet_address.toLowerCase() === value.toLowerCase());
+    return match?.name ?? value;
+  };
 
   const loadDbShipments = async () => {
     setIsLoadingDb(true);
@@ -102,6 +112,16 @@ export default function ShipmentsPage() {
 
   useEffect(() => {
     void loadDbShipments();
+    void fetchDirectory().then(({ organizations: organizationRows, products: productRows }) => {
+      setOrganizations(organizationRows);
+      const mintedProducts = productRows.filter((product) => product.token_id !== null);
+      setProducts(mintedProducts);
+      const latestProduct = mintedProducts[0];
+      if (latestProduct) {
+        setTeam1ProductCode(latestProduct.product_code);
+        setProductId(String(latestProduct.token_id));
+      }
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -296,6 +316,9 @@ export default function ShipmentsPage() {
                 <Link href={`/product/${productId}`} className="text-xs underline">
                   Product history
                 </Link>
+                <Link href={`/checkpoints?productId=${productId}`} className="text-xs underline">
+                  Run telemetry check
+                </Link>
                 <StatusBadge status={mounted && isConnected ? "CONNECTED" : "PENDING"} />
               </div>
             </div>
@@ -332,11 +355,18 @@ export default function ShipmentsPage() {
                   </label>
                   <label className="block text-[10px] uppercase tracking-wider text-gray-400 sm:col-span-2">
                     Team 1 product code
-                    <input
+                    <select
                       value={team1ProductCode}
-                      onChange={(event) => setTeam1ProductCode(event.target.value)}
+                      onChange={(event) => {
+                        const selected = products.find((product) => product.product_code === event.target.value);
+                        setTeam1ProductCode(event.target.value);
+                        if (selected?.token_id !== null && selected?.token_id !== undefined) setProductId(String(selected.token_id));
+                      }}
                       className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-black"
-                    />
+                    >
+                      {products.length === 0 && <option value={team1ProductCode}>{team1ProductCode} · directory unavailable</option>}
+                      {products.map((product) => <option key={product.id} value={product.product_code}>{product.product_code} · {product.batch?.product_name ?? "Minted product"} · token {product.token_id}</option>)}
+                    </select>
                   </label>
                 </div>
                 <button
@@ -404,8 +434,8 @@ export default function ShipmentsPage() {
                   <div className="mt-8 grid gap-5 sm:grid-cols-2">
                     <Detail label="Product" value={`#${record[1].toString()}`} />
                     <Detail label="Shipment status" value={inTransit ? "IN TRANSIT" : status} />
-                    <Detail label="Sent from" value={record[2]} mono />
-                    <Detail label="Sent to" value={record[3]} mono />
+                    <Detail label="Sent from" value={`${organizationName(record[2])} · ${record[2]}`} mono />
+                    <Detail label="Sent to" value={`${organizationName(record[3])} · ${record[3]}`} mono />
                     <Detail
                       label="Current owner"
                       value={
@@ -478,8 +508,8 @@ export default function ShipmentsPage() {
                             </Link>
                           </td>
                           <td className="py-3">#{s.product_id}</td>
-                          <td className="py-3 font-mono text-[11px] text-gray-600">{s.sender_org_id?.slice(0, 10) ?? "—"}</td>
-                          <td className="py-3 font-mono text-[11px] text-gray-600">{s.receiver_org_id?.slice(0, 10) ?? "—"}</td>
+                          <td className="py-3"><span className="font-medium">{organizationName(s.sender_org_id)}</span><span className="block font-mono text-[10px] text-gray-400">{s.sender_org_id?.slice(0, 10) ?? "—"}</span></td>
+                          <td className="py-3"><span className="font-medium">{organizationName(s.receiver_org_id)}</span><span className="block font-mono text-[10px] text-gray-400">{s.receiver_org_id?.slice(0, 10) ?? "—"}</span></td>
                           <td className="py-3">
                             <span className="inline-flex rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-800">
                               {s.status}

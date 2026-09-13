@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
@@ -20,10 +21,12 @@ import Timeline from "@/components/team2/Timeline";
 import {
   fetchCheckpoints,
   fetchCustodyTransfers,
+  fetchDirectory,
   fetchShipments,
   type CheckpointRecord,
   type CustodyRecord,
   type ShipmentRecord,
+  type OrganizationRecord,
 } from "@/lib/supabase";
 
 type DetailShipment = ShipmentRecord & {
@@ -42,23 +45,37 @@ type DetailShipment = ShipmentRecord & {
 export default function ShipmentDetails({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = React.use(params);
   const [shipment, setShipment] = useState<DetailShipment | null>(null);
   const [checkpoints, setCheckpoints] = useState<CheckpointRecord[]>([]);
   const [custodyTransfers, setCustodyTransfers] = useState<CustodyRecord[]>([]);
   const [error, setError] = useState("");
+  const [organizations, setOrganizations] = useState<OrganizationRecord[]>([]);
+
+  const organizationName = (value?: string | null) => {
+    if (!value) return "Unknown organization";
+    const match = organizations.find((organization) => organization.id.toLowerCase() === value.toLowerCase() || organization.wallet_address.toLowerCase() === value.toLowerCase());
+    return match?.name ?? value;
+  };
 
   useEffect(() => {
     const load = async () => {
       try {
-        const records = await fetchShipments();
+        const [{ organizations: organizationRows }, records] = await Promise.all([fetchDirectory(), fetchShipments()]);
+        setOrganizations(organizationRows);
+        const resolveOrganizationName = (value?: string | null) => {
+          if (!value) return "Unknown organization";
+          const match = organizationRows.find((organization) => organization.id.toLowerCase() === value.toLowerCase() || organization.wallet_address.toLowerCase() === value.toLowerCase());
+          return match?.name ?? value;
+        };
         const record = records.find(
-          (item) => String(item.on_chain_shipment_id ?? item.id) === params.id,
+          (item) => String(item.on_chain_shipment_id ?? item.id) === id,
         );
 
         if (!record) {
-          setError(`Shipment ${params.id} was not found in Supabase.`);
+          setError(`Shipment ${id} was not found in Supabase.`);
           return;
         }
 
@@ -70,8 +87,8 @@ export default function ShipmentDetails({
         setShipment({
           ...record,
           shipmentId: String(record.on_chain_shipment_id ?? record.id),
-          manufacturer: record.sender_org_id ?? "Unknown sender",
-          distributor: record.receiver_org_id ?? "Unknown receiver",
+          manufacturer: resolveOrganizationName(record.sender_org_id),
+          distributor: resolveOrganizationName(record.receiver_org_id),
           product: `Product #${record.product_id}`,
           origin: "On-chain sender wallet",
           destination: "On-chain receiver wallet",
@@ -88,7 +105,7 @@ export default function ShipmentDetails({
     };
 
     void load();
-  }, [params.id]);
+  }, [id]);
 
   if (!shipment) {
     return (

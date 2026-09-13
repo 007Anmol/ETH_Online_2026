@@ -195,29 +195,21 @@ export default function ProductDetailsPage() {
 
             <section className="mt-6 rounded-xl border border-gray-200 p-6">
               <h2 className="text-sm font-semibold">Custody history</h2>
-              <p className="mt-1 text-xs text-gray-400">A new row is added when someone clicks I received it.</p>
-              <div className="mt-4 divide-y divide-gray-100">
+              <p className="mt-1 text-xs text-gray-400">Every handoff and lifecycle event, newest first.</p>
+              <div className="mt-6">
                 {(lifecycle?.events ?? []).length === 0 && (
                   <p className="py-4 text-xs text-gray-400">No custody events yet. After manufacturing the owner is the manufacturer.</p>
                 )}
-                {(lifecycle?.events ?? []).map((event) => (
-                  <div key={event.id ?? `${event.occurred_at}-${event.event_type}`} className="flex flex-col gap-1 py-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="text-xs font-medium">
-                        {event.event_type}
-                        {event.payload?.leg ? ` · ${event.payload.leg}` : ""}
-                      </p>
-                      <p className="mt-1 font-mono text-[11px] text-gray-500">
-                        {event.payload?.from ?? "—"} → {event.payload?.to ?? "—"}
-                      </p>
-                    </div>
-                    <div className="text-right text-[10px] text-gray-400">
-                      <p>{event.occurred_at ? new Date(event.occurred_at).toLocaleString() : ""}</p>
-                      {event.chain_tx_hash && (
-                        <a className="inline-flex items-center gap-1 underline" href={hashscanTx(event.chain_tx_hash)} target="_blank" rel="noreferrer">
-                          {event.chain_tx_hash.slice(0, 10)}… <ExternalLink size={10} />
-                        </a>
-                      )}
+                {[...(lifecycle?.events ?? [])].sort((a, b) => (b.occurred_at ?? "").localeCompare(a.occurred_at ?? "")).map((event, index, events) => (
+                  <div key={event.id ?? `${event.occurred_at}-${event.event_type}`} className="relative flex gap-4 pb-7 last:pb-0">
+                    {index < events.length - 1 && <div className="absolute left-[9px] top-5 h-full w-px bg-gray-200" />}
+                    <div className="relative z-10 mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-black bg-black text-[9px] text-white">{events.length - index}</div>
+                    <div className="min-w-0 flex-1 rounded-lg border border-gray-200 px-4 py-3">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                        <div><p className="text-xs font-semibold">{formatEventType(event.event_type)}{event.payload?.leg ? ` · ${event.payload.leg}` : ""}</p><p className="mt-1 text-[11px] text-gray-500">{event.payload?.from ?? "Origin"} <span className="mx-1 text-gray-300">→</span> {event.payload?.to ?? "Recorded on-chain"}</p></div>
+                        <p className="shrink-0 text-[10px] text-gray-400">{event.occurred_at ? new Date(event.occurred_at).toLocaleString() : "Unknown time"}</p>
+                      </div>
+                      {event.chain_tx_hash && <a className="mt-3 inline-flex items-center gap-1 text-[10px] text-gray-500 underline" href={hashscanTx(event.chain_tx_hash)} target="_blank" rel="noreferrer">On-chain receipt {event.chain_tx_hash.slice(0, 10)}… <ExternalLink size={10} /></a>}
                     </div>
                   </div>
                 ))}
@@ -230,6 +222,10 @@ export default function ProductDetailsPage() {
       </div>
     </div>
   );
+}
+
+function formatEventType(value?: string) {
+  return (value ?? "Product event").replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function latestOwnerRole(events: EventRow[] | undefined, owner: string) {

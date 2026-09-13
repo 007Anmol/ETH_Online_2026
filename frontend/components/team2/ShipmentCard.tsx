@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { ArrowUpRight, MapPin } from "lucide-react";
 import StatusBadge from "./StatusBadge";
+import { Card } from "@/components/ui/Card";
+import { Spotlight } from "@/components/ui/Spotlight";
 
-type Shipment = {
+export type ShipmentCardData = {
   id: string;
   product: string;
   manufacturer: string;
@@ -14,19 +16,20 @@ type Shipment = {
   status: string;
   verification: string;
   escrow: string;
-  value: string;
+  value?: string;
 };
 
 export default function ShipmentCard({
   shipment,
 }: {
-  shipment: Shipment;
+  shipment: ShipmentCardData;
 }) {
   return (
     <Link
       href={`/shipments/${shipment.id}`}
-      className="group block rounded-xl border border-gray-200 bg-white p-5 transition hover:border-black"
+      className="group block"
     >
+      <Card className="p-5"><Spotlight>
       <div className="flex items-start justify-between">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gray-400">
@@ -66,6 +69,7 @@ export default function ShipmentCard({
         <StatusBadge status={shipment.verification} />
         <StatusBadge status={shipment.escrow} />
       </div>
+      </Spotlight></Card>
     </Link>
   );
 }

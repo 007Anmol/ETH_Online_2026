@@ -17,6 +17,7 @@ export {
   fetchCustodyTransfers,
   fetchEscrows,
   fetchShipments,
+  fetchDirectory,
   saveEscrowRecord,
   updateShipmentRecord,
   type AnomalyRecord,
@@ -24,4 +25,6 @@ export {
   type CustodyRecord,
   type EscrowRecord,
   type ShipmentRecord,
+  type OrganizationRecord,
+  type ProductRecord,
 } from "./records";

@@ -36,7 +36,7 @@ type LogisticsProduct = readonly [team1Hash: `0x${string}`, custodian: `0x${stri
 
 export default function SettlementPage() {
   const { address, isConnected } = useAccount();
-  const [productId, setProductId] = useState(DEMO_PRODUCT.logisticsId);
+  const [productId, setProductId] = useState<string>(DEMO_PRODUCT.logisticsId);
   const [receiver, setReceiver] = useState("");
   const [payee, setPayee] = useState("");
   const [amount, setAmount] = useState("0.1");

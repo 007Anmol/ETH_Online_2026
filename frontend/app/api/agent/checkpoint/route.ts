@@ -19,7 +19,14 @@ export async function POST(request: Request) {
       new SupabaseStore(),
       createViemBlockchainGateway(),
     );
-    return NextResponse.json(result);
+    return NextResponse.json({
+      ...result,
+      payment: {
+        requestId: paid.payment.requestId,
+        status: "AUTHORIZED",
+        resource: "AGENT_API",
+      },
+    });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Agent processing failed" }, { status: 503 });
   }

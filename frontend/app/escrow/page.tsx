@@ -29,7 +29,7 @@ export default function EscrowPage() {
   const [mounted, setMounted] = useState(false);
   const [payee, setPayee] = useState("");
   const [amount, setAmount] = useState("0.1");
-  const [productId, setProductId] = useState(DEMO_PRODUCT.logisticsId);
+  const [productId, setProductId] = useState<string>(DEMO_PRODUCT.logisticsId);
   const [message, setMessage] = useState("");
   const [dbEscrows, setDbEscrows] = useState<DbEscrowRecord[]>([]);
   const [isLoadingDb, setIsLoadingDb] = useState(false);

@@ -58,6 +58,29 @@ export type EscrowRecord = {
   updated_at?: string;
 };
 
+export type OrganizationRecord = {
+  id: string;
+  name: string;
+  wallet_address: string;
+  type: string;
+};
+
+export type ProductRecord = {
+  id: string;
+  product_code: string;
+  token_id: number | null;
+  serial_number: string;
+  status: string;
+  created_at: string;
+  batch?: { product_name?: string | null } | null;
+};
+
+export async function fetchDirectory(): Promise<{ organizations: OrganizationRecord[]; products: ProductRecord[] }> {
+  const response = await fetch("/api/directory", { cache: "no-store" });
+  if (!response.ok) throw new Error("Failed to fetch organization and product directory");
+  return response.json();
+}
+
 export async function fetchShipments(filters?: {
   productId?: string;
   status?: string;

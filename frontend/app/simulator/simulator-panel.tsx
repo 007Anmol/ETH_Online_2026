@@ -5,6 +5,7 @@ import { VerifyResult } from "@/components/verify-result";
 import { useNfcDemo } from "@/lib/nfc/use-nfc-demo";
 import type { BindableProduct } from "@/lib/nfc/product-summary";
 import { HashScanLink } from "@/components/ui/hashscan-link";
+import { NfcTapAnimation } from "./nfc-tap-animation";
 
 export function SimulatorPanel({ products }: { products: BindableProduct[] }) {
   const demo = useNfcDemo(products, {});
@@ -17,6 +18,8 @@ export function SimulatorPanel({ products }: { products: BindableProduct[] }) {
           Authentic creates a new payload, then verifies it. Replay sends the
           exact bytes below. Invalid sends a broken stamp.
         </p>
+
+        <NfcTapAnimation active={demo.busy === "authentic"} />
 
         <BoundProductSelect
           label="Bound product"

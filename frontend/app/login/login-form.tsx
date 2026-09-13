@@ -82,8 +82,57 @@ export function LoginForm() {
   const [worldContext, setWorldContext] =
     useState<WorldContextResponse | null>(null);
   const [worldProofReceived, setWorldProofReceived] = useState(false);
+  const [walletSignature, setWalletSignature] = useState<string | null>(null);
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  async function prepareWalletAuthentication() {
+    const privyAccessToken = await getAccessToken();
+    const connectedWallet = asSignableWallet(wallets[0]);
+
+    if (!privyAccessToken || !connectedWallet) {
+      throw new Error("Wallet authentication is incomplete. Please reconnect your wallet and try again.");
+    }
+
+    const challengeResponse = await withTimeout(
+      fetch("/api/auth/wallet-challenge", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ privyAccessToken }),
+      }),
+      "Could not start the wallet signature challenge. Please try again.",
+    );
+    const challengeBody = (await challengeResponse.json()) as WalletChallengeResponse;
+
+    if (!challengeResponse.ok || !challengeBody.message) {
+      throw new Error(
+        challengeBody.error ?? "Could not create a wallet signature challenge",
+      );
+    }
+
+    const signingWallet =
+      wallets
+        .map(asSignableWallet)
+        .find(
+          (wallet) =>
+            wallet &&
+            wallet.address.toLowerCase() ===
+              challengeBody.walletAddress?.toLowerCase(),
+        ) ?? connectedWallet;
+
+    if (!signingWallet) {
+      throw new Error("Connected wallet cannot sign the authentication challenge");
+    }
+
+    setError("Approve the wallet signature request to continue to World ID.");
+    const signature = await signingWallet.sign(challengeBody.message);
+
+    setWalletAddress(signingWallet.address);
+    setWalletSignature(signature);
+  }
 
   async function beginWorldIdVerification() {
     setError(null);
@@ -134,52 +183,11 @@ export function LoginForm() {
     setPending(true);
 
     try {
-      if (!authenticated) {
-        await login();
-        throw new Error("Complete wallet login, then verify World ID again.");
-      }
-
       const privyAccessToken = await getAccessToken();
-      const connectedWallet = asSignableWallet(wallets[0]);
 
-      if (!privyAccessToken || !connectedWallet) {
-        throw new Error("Wallet authentication expired. Please reconnect your wallet and try again.");
+      if (!privyAccessToken || !walletAddress || !walletSignature) {
+        throw new Error("Wallet authentication is incomplete. Please reconnect your wallet and try again.");
       }
-
-      const challengeResponse = await withTimeout(
-        fetch("/api/auth/wallet-challenge", {
-          method: "POST",
-          headers: {
-            "content-type": "application/json",
-          },
-          body: JSON.stringify({ privyAccessToken }),
-        }),
-        "Could not start the wallet signature challenge. Please try again.",
-      );
-      const challengeBody = (await challengeResponse.json()) as WalletChallengeResponse;
-
-      if (!challengeResponse.ok || !challengeBody.message) {
-        throw new Error(
-          challengeBody.error ?? "Could not create a wallet signature challenge",
-        );
-      }
-
-      const signingWallet =
-        wallets
-          .map(asSignableWallet)
-          .find(
-            (wallet) =>
-              wallet &&
-              wallet.address.toLowerCase() ===
-                challengeBody.walletAddress?.toLowerCase(),
-          ) ?? connectedWallet;
-
-      if (!signingWallet) {
-        throw new Error("Connected wallet cannot sign the authentication challenge");
-      }
-
-      setError("World ID confirmed. Approve the wallet signature request to finish.");
-      const walletSignature = await signingWallet.sign(challengeBody.message);
 
       const response = await withTimeout(
         fetch("/api/auth/complete", {
@@ -190,7 +198,7 @@ export function LoginForm() {
           body: JSON.stringify({
             privyAccessToken,
             worldIdProof: proof,
-            walletAddress: signingWallet.address,
+            walletAddress,
             walletSignature,
           }),
         }),
@@ -220,8 +228,26 @@ export function LoginForm() {
   async function handleWorldVerify(result: WorldIdResult) {
     setWorldProofReceived(true);
     setWorldOpen(false);
-    setError("World ID confirmed. Approve the wallet signature request to finish.");
+    setError("World ID confirmed. Finishing authentication.");
     await completeAuthentication(result);
+  }
+
+  async function beginWalletAndWorldIdVerification() {
+    setError(null);
+    setPending(true);
+
+    try {
+      await prepareWalletAuthentication();
+      await beginWorldIdVerification();
+    } catch (verificationError) {
+      setError(
+        verificationError instanceof Error
+          ? verificationError.message
+          : "Could not start authentication",
+      );
+    } finally {
+      setPending(false);
+    }
   }
 
   return (
@@ -234,11 +260,11 @@ export function LoginForm() {
           delay: 0.2,
           ease: "easeOut",
         }}
-        className="relative mt-8 w-full max-w-md overflow-hidden rounded-2xl border border-white/10 bg-black/30 p-8 text-left shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] backdrop-blur-xl"
+        className="relative w-full overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 text-left shadow-[0_20px_70px_rgba(23,23,23,0.08)] lg:p-8"
       >
-        <div className="pointer-events-none absolute -right-24 -top-24 h-48 w-48 rounded-full bg-emerald-500/20 blur-3xl" />
+        <div className="pointer-events-none absolute right-0 top-0 h-32 w-32 bg-emerald-500/[0.08] blur-3xl" />
 
-        <p className="relative z-10 text-sm text-zinc-300">
+        <p className="relative z-10 max-w-sm text-sm leading-6 text-[var(--muted)]">
           Verify that you are a unique human, then authenticate the wallet
           registered to your manufacturer profile.
         </p>
@@ -291,10 +317,10 @@ export function LoginForm() {
               return;
             }
 
-            await beginWorldIdVerification();
+            await beginWalletAndWorldIdVerification();
           }}
           disabled={!ready || pending}
-          className="relative z-10 mt-6 w-full rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-4 py-3.5 text-sm font-semibold text-white shadow-lg shadow-emerald-900/20 hover:from-emerald-400 hover:to-teal-500 disabled:cursor-not-allowed disabled:opacity-60"
+          className="relative z-10 mt-7 flex h-12 w-full items-center justify-center rounded-full bg-[var(--foreground)] px-4 text-sm font-medium text-[var(--background)] transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {!ready
             ? "Loading authentication…"
@@ -308,16 +334,16 @@ export function LoginForm() {
         {authenticated && !worldContext && (
           <button
             type="button"
-            onClick={beginWorldIdVerification}
+            onClick={beginWalletAndWorldIdVerification}
             disabled={pending}
-            className="relative z-10 mt-3 w-full rounded-xl border border-white/15 px-4 py-3 text-sm font-medium text-zinc-200 hover:bg-white/5 disabled:opacity-60"
+            className="relative z-10 mt-3 flex h-12 w-full items-center justify-center rounded-full border border-[var(--border)] px-4 text-sm font-medium text-[var(--foreground)] transition-colors hover:border-[var(--foreground)] disabled:opacity-60"
           >
             Start World ID verification
           </button>
         )}
 
         {worldProofReceived && (
-          <p className="relative z-10 mt-4 text-xs text-emerald-300">
+          <p className="relative z-10 mt-4 text-xs text-emerald-600 dark:text-emerald-400">
             World ID proof received. Approve the wallet signature to finish.
           </p>
         )}
@@ -326,7 +352,7 @@ export function LoginForm() {
           <motion.p
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
-            className="relative z-10 mt-4 text-sm text-red-400"
+            className="relative z-10 mt-4 border-l-2 border-red-500 pl-3 text-sm leading-6 text-red-600 dark:text-red-400"
           >
             {error}
           </motion.p>

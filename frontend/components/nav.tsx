@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { isManufacturerRole, type Session } from "@/lib/types";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 type NavProps = {
   session: Session | null;
@@ -38,10 +39,13 @@ export function Nav({ session }: NavProps) {
   }
 
   return (
-    <header className="border-b border-zinc-200 bg-white">
+    <header className="border-b border-[var(--border)] bg-[var(--background)]">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3">
-        <Link href="/" className="text-sm font-semibold tracking-tight text-zinc-900">
-          VeriChain
+        <Link href="/" className="flex items-center gap-3 text-sm font-semibold tracking-[0.16em]">
+          <span className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--foreground)]">
+            <span className="h-1.5 w-1.5 rounded-full bg-[var(--foreground)]" />
+          </span>
+          PRAMAAN
         </Link>
         <nav className="flex flex-1 flex-wrap items-center justify-end gap-1">
           {links.map((link) => {
@@ -54,8 +58,8 @@ export function Nav({ session }: NavProps) {
                 href={link.href}
                 className={`rounded-md px-2.5 py-1.5 text-sm ${
                   active
-                    ? "bg-zinc-900 text-white"
-                    : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
+                    ? "bg-[var(--foreground)] text-[var(--background)]"
+                    : "text-[var(--muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
                 }`}
               >
                 {link.label}
@@ -66,16 +70,17 @@ export function Nav({ session }: NavProps) {
             <button
               type="button"
               onClick={logout}
-              className="rounded-md px-2.5 py-1.5 text-sm text-zinc-600 hover:bg-zinc-100"
+              className="rounded-md px-2.5 py-1.5 text-sm text-[var(--muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
             >
               Log out
             </button>
           ) : null}
+          <ThemeToggle />
         </nav>
       </div>
       {session ? (
-        <div className="border-t border-zinc-100 bg-zinc-50">
-          <div className="mx-auto flex w-full max-w-6xl justify-between px-4 py-1.5 text-xs text-zinc-500">
+        <div className="border-t border-[var(--border)] bg-[var(--surface-muted)]">
+          <div className="mx-auto flex w-full max-w-6xl justify-between px-4 py-1.5 text-xs text-[var(--muted)]">
             <span>
               {session.displayName ?? "Signed in"} · {session.role}
             </span>

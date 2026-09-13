@@ -25,7 +25,7 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: "VeriChain",
+  title: "PRAMAAN - Physical-to-digital product identity",
   description:
     "Physical-to-digital product identity: one product, one tag, one digital twin.",
 };

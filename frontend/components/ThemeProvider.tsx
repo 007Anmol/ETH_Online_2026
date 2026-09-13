@@ -20,13 +20,12 @@ type ThemeContextValue = {
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("light");
+  const [theme, setTheme] = useState<Theme>("dark");
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("verichain-theme");
 
-    const initialTheme: Theme =
-      savedTheme === "dark" ? "dark" : "light";
+    const initialTheme: Theme = savedTheme === "light" ? "light" : "dark";
 
     setTheme(initialTheme);
 

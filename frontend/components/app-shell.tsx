@@ -20,7 +20,7 @@ export function AppShell({ session, children }: AppShellProps) {
   }
 
   return (
-    <div className="flex min-h-full flex-col bg-zinc-50">
+    <div className="flex min-h-full flex-col bg-[var(--background)]">
       <Nav session={session} />
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">{children}</main>
     </div>
